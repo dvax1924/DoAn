@@ -126,7 +126,7 @@ const Products = () => {
             {pageTitle}
           </h1>
           <p style={{ color: '#666', fontSize: '18px' }}>
-            {totalProducts} san pham
+            {totalProducts} sản phẩm
           </p>
         </div>
 
@@ -278,7 +278,7 @@ const Products = () => {
         {!loading && !error && products.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: '80px' }}>
             <p style={{ fontSize: '20px', color: '#666' }}>
-              Hien tai chua co san pham nao.
+              Hiện tại chưa có sản phẩm nào.
             </p>
           </div>
         )}
