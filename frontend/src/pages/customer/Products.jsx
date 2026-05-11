@@ -69,9 +69,9 @@ const Products = () => {
         }
       }
     } catch (err) {
-      console.error('Loi tai san pham:', err);
+      console.error('Lỗi tải sản phẩm:', err);
       if (!isLoadMore) {
-        setError('Khong the tai danh sach san pham. Vui long thu lai sau.');
+        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
       }
     } finally {
       setLoading(false);
@@ -115,8 +115,8 @@ const Products = () => {
   }, [fetchProducts]);
 
   const pageTitle = searchKeyword
-    ? `Ket qua tim kiem: "${searchKeyword}"`
-    : categoryName || 'Tat ca san pham';
+    ? `Kết quả tìm kiếm: "${searchKeyword}"`
+    : categoryName || 'Tất cả sản phẩm';
 
   return (
     <div style={{ padding: '40px 20px', backgroundColor: '#F5F5F3', minHeight: '80vh' }}>
@@ -142,15 +142,15 @@ const Products = () => {
               minWidth: '220px'
             }}
           >
-            <option value="">Sap xep mac dinh</option>
-            <option value="price-low">Gia: Thap den cao</option>
-            <option value="price-high">Gia: Cao den thap</option>
+            <option value="">Sắp xếp mặc định</option>
+            <option value="price-low">Giá: Thấp đến cao</option>
+            <option value="price-high">Giá: Cao đến thấp</option>
           </select>
         </div>
 
         {loading && (
           <p style={{ textAlign: 'center', fontSize: '18px', marginTop: '50px' }}>
-            Dang tai san pham...
+            Đang tải sản phẩm...
           </p>
         )}
 
@@ -268,7 +268,7 @@ const Products = () => {
                   onMouseEnter={(e) => { if (!loadingMore) e.currentTarget.style.backgroundColor = '#333'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#1A1A1B'; }}
                 >
-                  {loadingMore ? 'Dang tai...' : 'Xem them san pham'}
+                  {loadingMore ? 'Đang tải...' : 'Xem thêm sản phẩm'}
                 </button>
               </div>
             )}
