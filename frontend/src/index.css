@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg-color: #F5F5F3;
+  --text-color: #1A1A1B;
+  --accent-color: #1A1A1B;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Grid sản phẩm 4 cột */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+/* ==================== SCROLLBAR ADMIN SIDEBAR ==================== */
+.admin-sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: #444 #1A1A1B;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-track {
+  background: #1A1A1B;
+  border-radius: 20px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 20px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
