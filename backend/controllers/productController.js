@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 const Product = require('../models/Product');
 const { io } = require('../socket');
 const {
@@ -41,24 +38,9 @@ async function uploadProductImages(files = []) {
   return uploadedUrls;
 }
 
-function deleteLocalImage(imagePath) {
-  if (typeof imagePath !== 'string' || !imagePath.startsWith('/uploads/')) return;
-
-  const relativePath = imagePath.replace(/^\//, '');
-  const fullPath = path.join(__dirname, '..', relativePath);
-
-  if (fs.existsSync(fullPath)) {
-    fs.unlinkSync(fullPath);
-  }
-}
-
 async function deleteProductImageAsset(imagePath) {
-  if (isCloudinaryUrl(imagePath)) {
-    await deleteCloudinaryImage(imagePath);
-    return;
-  }
-
-  deleteLocalImage(imagePath);
+  if (!isCloudinaryUrl(imagePath)) return;
+  await deleteCloudinaryImage(imagePath);
 }
 
 exports.createProduct = async (req, res) => {
