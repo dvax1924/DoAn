@@ -85,10 +85,7 @@ exports.getProducts = async (req, res) => {
     let query = { isActive: true };
     if (category) query.category = category;
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
+      query.name = { $regex: search, $options: 'i' };
     }
 
     const skip = (page - 1) * Number(limit);
