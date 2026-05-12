@@ -60,8 +60,9 @@ function createVnpayTxnRef() {
 
 function buildVnpayPaymentUrl({ amount, ipAddr, txnRef, orderInfo }) {
   const config = getVnpayConfig();
-  const createDate = moment().format('YYYYMMDDHHmmss');
-  const expireDate = moment().add(15, 'minutes').format('YYYYMMDDHHmmss');
+  const vietnamNow = moment().utcOffset('+07:00');
+  const createDate = vietnamNow.format('YYYYMMDDHHmmss');
+  const expireDate = vietnamNow.clone().add(15, 'minutes').format('YYYYMMDDHHmmss');
   const normalizedAmount = Math.round(Number(amount || 0));
 
   if (!normalizedAmount || normalizedAmount <= 0) {
