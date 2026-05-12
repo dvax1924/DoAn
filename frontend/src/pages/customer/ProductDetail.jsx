@@ -45,7 +45,9 @@ const ProductDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     socket.on('productUpdated', (data) => {
       if (data.product && data.product._id === id) {
@@ -88,7 +90,6 @@ const ProductDetail = () => {
     return () => {
       socket.off('productUpdated');
       socket.off('productDeleted');
-      socket.disconnect();
     };
   }, [id, navigate]);
 

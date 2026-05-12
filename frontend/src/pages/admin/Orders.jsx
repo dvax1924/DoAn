@@ -13,7 +13,7 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const fetchOrders = async () => {
+  const fetchOrders = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/orders');
@@ -25,31 +25,59 @@ const AdminOrders = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   // 🔔 Socket.IO: Lắng nghe đơn hàng mới từ customer real-time
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
+    socket.emit('joinAdmin');
 
     socket.on('newOrderCreated', (data) => {
       const { order } = data;
 
-      // Thêm đơn hàng mới lên đầu danh sách
-      setOrders(prev => [order, ...prev]);
+      let isNewOrder = false;
 
-      // Hiển thị thông báo cho admin
-      toast.info(`📦 Đơn hàng mới #${order._id.slice(-8).toUpperCase()} - ${order.totalAmount?.toLocaleString('vi-VN')}đ`);
+      // Tránh trùng đơn khi cùng một đơn được đồng bộ nhiều lần
+      setOrders((prev) => {
+        const exists = prev.some((item) => item._id === order._id);
+        isNewOrder = !exists;
+        return exists ? prev : [order, ...prev];
+      });
+
+      if (isNewOrder) {
+        toast.info(`📦 Đơn hàng mới #${order._id.slice(-8).toUpperCase()} - ${order.totalAmount?.toLocaleString('vi-VN')}đ`);
+      }
+    });
+
+    socket.on('orderPaymentUpdated', (data) => {
+      const { orderId, paymentStatus, orderStatus } = data;
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === orderId
+            ? { ...order, paymentStatus, orderStatus: orderStatus || order.orderStatus }
+            : order
+        )
+      );
+
+      fetchOrders();
+
+      if (orderStatus === 'cancelled') {
+        toast.info(`Thanh toán VNPay của đơn #${orderId.slice(-8).toUpperCase()} đã bị hủy hoặc thất bại`);
+      }
     });
 
     return () => {
       socket.off('newOrderCreated');
-      socket.disconnect();
+      socket.off('orderPaymentUpdated');
     };
-  }, []);
+  }, [fetchOrders]);
 
   // ==================== LỌC ĐƠN HÀNG (ĐÃ SỬA HOÀN CHỈNH) ====================
   const filteredOrders = useMemo(() => {
@@ -360,6 +388,11 @@ const AdminOrders = () => {
                   <div style={detailCardStyle}>
                     <p style={detailLabelStyle}>Giá tiền</p>
                     <p style={detailValueStyle}>{formatCurrency(selectedOrder.totalAmount)}</p>
+                  </div>
+
+                  <div style={detailCardStyle}>
+                    <p style={detailLabelStyle}>Phương thức thanh toán</p>
+                    <p style={detailValueStyle}>{selectedOrder.paymentMethod || 'COD'}</p>
                   </div>
 
                   <div style={detailCardStyle}>

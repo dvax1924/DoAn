@@ -50,7 +50,9 @@ const Navbar = () => {
 
   // 🔔 Socket.IO: Lắng nghe thay đổi danh mục real-time
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     socket.on('categoryUpdated', () => {
       fetchCategories();
@@ -58,7 +60,6 @@ const Navbar = () => {
 
     return () => {
       socket.off('categoryUpdated');
-      socket.disconnect();
     };
   }, [fetchCategories]);
 

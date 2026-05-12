@@ -95,7 +95,9 @@ const Products = () => {
   }, [products.length, totalProducts]);
 
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     const refreshProducts = () => {
       setPage(1);
@@ -110,7 +112,6 @@ const Products = () => {
       socket.off('productCreated');
       socket.off('productUpdated');
       socket.off('productDeleted');
-      socket.disconnect();
     };
   }, [fetchProducts]);
 

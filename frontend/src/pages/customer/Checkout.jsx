@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useCart } from '../../hooks/useCart';
-import { useAuth } from '../../hooks/useAuth';
-import api from '../../api/axiosInstance';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import api from '../../api/axiosInstance';
+import { useAuth } from '../../hooks/useAuth';
+import { useCart } from '../../hooks/useCart';
+
+const VNPAY_CART_STORAGE_KEY = 'pendingVnpayCart';
 
 const Checkout = () => {
   const { cart, cartTotal, clearCart } = useCart();
@@ -18,85 +20,82 @@ const Checkout = () => {
     district: '',
     province: ''
   });
-
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [loading, setLoading] = useState(false);
 
-  // Debug giỏ hàng
-  useEffect(() => {
-    console.log("=== DỮ LIỆU GIỎ HÀNG Ở CHECKOUT ===");
-    console.log("Cart:", cart);
-    console.log("CartTotal:", cartTotal);
-  }, [cart, cartTotal]);
-
-  // Kiểm tra đăng nhập
   useEffect(() => {
     if (!user) {
-      toast.warning("Vui lòng đăng nhập để thanh toán");
-      navigate('/login');
+      toast.warning('Vui lòng đăng nhập để thanh toán');
+      navigate('/login?redirect=/checkout');
     }
   }, [user, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
     if (name === 'phone') {
       const onlyNumbers = value.replace(/[^0-9]/g, '');
-      setShippingAddress(prev => ({ ...prev, [name]: onlyNumbers }));
-    } else {
-      setShippingAddress(prev => ({ ...prev, [name]: value }));
+      setShippingAddress((prev) => ({ ...prev, [name]: onlyNumbers }));
+      return;
     }
+
+    setShippingAddress((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmitOrder = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (cart.length === 0) {
-    toast.error("Giỏ hàng trống!");
-    return;
-  }
+    if (cart.length === 0) {
+      toast.error('Giỏ hàng trống');
+      return;
+    }
 
-  // Sử dụng trực tiếp cartTotal từ context (đã tính sẵn và chính xác)
-  const finalTotal = Number(cartTotal);
+    const finalTotal = Number(cartTotal);
+    if (Number.isNaN(finalTotal) || finalTotal <= 0) {
+      toast.error('Giá trị đơn hàng không hợp lệ');
+      return;
+    }
 
-  console.log("=== PAYLOAD GỬI SERVER ===");
-  console.log("totalAmount:", finalTotal);
-  console.log("Cart data:", cart);
+    const orderItems = cart.map((item) => ({
+      product: item?.product?._id || item.product,
+      variant: item.variant,
+      qty: item.qty,
+      price: Number(item.price) || 0
+    }));
 
-  const orderItems = cart.map(item => ({
-    product: item.product,
-    variant: item.variant,
-    qty: item.qty,
-    price: Number(item.price) || 0
-  }));
+    setLoading(true);
 
-  console.log("orderItems:", orderItems);
+    try {
+      const res = await api.post('/orders', {
+        items: orderItems,
+        shippingAddress,
+        paymentMethod
+      });
 
-  if (isNaN(finalTotal) || finalTotal <= 0) {
-    toast.error("Giá trị đơn hàng không hợp lệ!");
-    return;
-  }
+      if (!res.data.success) {
+        throw new Error(res.data.message || 'Đặt hàng thất bại');
+      }
 
-  setLoading(true);
+      if (paymentMethod === 'VNPAY') {
+        if (!res.data.paymentUrl) {
+          throw new Error('Không tạo được liên kết thanh toán VNPay');
+        }
 
-  try {
-    const res = await api.post('/orders', {
-      items: orderItems,
-      shippingAddress,
-      totalAmount: finalTotal,
-      paymentMethod: 'COD'
-    });
+        sessionStorage.setItem(VNPAY_CART_STORAGE_KEY, JSON.stringify(cart));
+        clearCart();
+        window.location.assign(res.data.paymentUrl);
+        return;
+      }
 
-    if (res.data.success) {
-      toast.success("Đặt hàng thành công!");
+      toast.success('Đặt hàng thành công');
       clearCart();
       navigate('/orders');
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Đặt hàng thất bại');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Lỗi đặt hàng:", error.response?.data || error);
-    toast.error(error.response?.data?.message || "Đặt hàng thất bại");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   if (!user) return null;
 
@@ -117,80 +116,113 @@ const Checkout = () => {
         </h1>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
-
-          {/* Form địa chỉ */}
           <div>
             <h2 style={{ marginBottom: '25px' }}>Thông tin giao hàng</h2>
             <form onSubmit={handleSubmitOrder}>
               <div style={{ marginBottom: '20px' }}>
                 <label>Họ và tên *</label>
-                <input type="text" name="name" value={shippingAddress.name} onChange={handleInputChange} required
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                <input type="text" name="name" value={shippingAddress.name} onChange={handleInputChange} required style={inputStyle} />
               </div>
 
               <div style={{ marginBottom: '20px' }}>
                 <label>Số điện thoại *</label>
-                <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInputChange} maxLength={11} required
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleInputChange} maxLength={11} required style={inputStyle} />
               </div>
 
               <div style={{ marginBottom: '20px' }}>
                 <label>Địa chỉ chi tiết *</label>
-                <input type="text" name="street" value={shippingAddress.street} onChange={handleInputChange} required
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                <input type="text" name="street" value={shippingAddress.street} onChange={handleInputChange} required style={inputStyle} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div>
                   <label>Phường/Xã *</label>
-                  <input type="text" name="ward" value={shippingAddress.ward} onChange={handleInputChange} required
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                  <input type="text" name="ward" value={shippingAddress.ward} onChange={handleInputChange} required style={inputStyle} />
                 </div>
                 <div>
                   <label>Quận/Huyện *</label>
-                  <input type="text" name="district" value={shippingAddress.district} onChange={handleInputChange} required
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                  <input type="text" name="district" value={shippingAddress.district} onChange={handleInputChange} required style={inputStyle} />
                 </div>
               </div>
 
               <div style={{ marginTop: '20px' }}>
                 <label>Tỉnh/Thành phố</label>
-                <input type="text" name="province" value={shippingAddress.province} onChange={handleInputChange}
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }} />
+                <input type="text" name="province" value={shippingAddress.province} onChange={handleInputChange} style={inputStyle} />
               </div>
 
-              <button 
+              <div style={{ marginTop: '28px' }}>
+                <p style={{ margin: '0 0 12px', fontWeight: '600' }}>Phương thức thanh toán</p>
+
+                <label style={paymentOptionStyle}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="COD"
+                    checked={paymentMethod === 'COD'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  />
+                  <span>Thanh toán khi nhận hàng (COD)</span>
+                </label>
+
+                <label style={paymentOptionStyle}>
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="VNPAY"
+                    checked={paymentMethod === 'VNPAY'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                  />
+                  <span>Thanh toán online qua VNPay</span>
+                </label>
+              </div>
+
+              <button
                 type="submit"
                 disabled={loading}
                 style={{
-                  marginTop: '40px', width: '100%', padding: '18px',
-                  backgroundColor: '#1A1A1B', color: 'white', border: 'none',
-                  borderRadius: '8px', fontSize: '18px', fontWeight: '600',
+                  marginTop: '40px',
+                  width: '100%',
+                  padding: '18px',
+                  backgroundColor: '#1A1A1B',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '18px',
+                  fontWeight: '600',
                   cursor: loading ? 'not-allowed' : 'pointer'
                 }}
               >
-                {loading ? "Đang xử lý..." : "XÁC NHẬN ĐẶT HÀNG (COD)"}
+                {loading
+                  ? 'Đang xử lý...'
+                  : paymentMethod === 'VNPAY'
+                    ? 'THANH TOÁN QUA VNPAY'
+                    : 'XÁC NHẬN ĐẶT HÀNG (COD)'}
               </button>
             </form>
           </div>
 
-          {/* Phần Đơn hàng của bạn */}
           <div style={{ background: 'white', padding: '30px', borderRadius: '12px', height: 'fit-content' }}>
             <h3 style={{ marginBottom: '20px' }}>Đơn hàng của bạn</h3>
-            
+
             {cart.map((item, index) => {
               const price = Number(item.price) || 0;
               const subtotal = price * item.qty;
 
               return (
-                <div key={index} style={{ 
-                  display: 'flex', justifyContent: 'space-between', 
-                  marginBottom: '18px', paddingBottom: '18px', borderBottom: '1px solid #eee'
-                }}>
+                <div
+                  key={`${item.product}-${item.variant?.size || index}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '18px',
+                    paddingBottom: '18px',
+                    borderBottom: '1px solid #eee'
+                  }}
+                >
                   <div>
                     <div style={{ fontWeight: '500', marginBottom: '4px' }}>{item.name}</div>
                     <div style={{ fontSize: '14px', color: '#666' }}>
-                      Size: {item.variant?.size || '—'} • SL: {item.qty}
+                      Size: {item.variant?.size || '-'} | SL: {item.qty}
                     </div>
                   </div>
                   <div style={{ fontWeight: '600', textAlign: 'right' }}>
@@ -200,22 +232,51 @@ const Checkout = () => {
               );
             })}
 
-            <div style={{ 
-              marginTop: '25px', paddingTop: '20px', borderTop: '2px solid #eee',
-              display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: '600'
-            }}>
+            <div
+              style={{
+                marginTop: '25px',
+                paddingTop: '20px',
+                borderTop: '2px solid #eee',
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '20px',
+                fontWeight: '600'
+              }}
+            >
               <span>Tổng cộng</span>
               <span>{cartTotal.toLocaleString('vi-VN')}đ</span>
             </div>
 
-            <div style={{ marginTop: '10px', fontSize: '14px', color: '#27ae60', textAlign: 'center' }}>
-              Thanh toán khi nhận hàng (COD)
+            <div style={{ marginTop: '12px', fontSize: '14px', color: '#555', textAlign: 'center', lineHeight: '1.7' }}>
+              {paymentMethod === 'VNPAY'
+                ? 'Bạn sẽ được chuyển đến cổng thanh toán VNPay sau khi hệ thống tạo đơn hàng.'
+                : 'Bạn sẽ thanh toán khi nhận hàng.'}
             </div>
           </div>
         </div>
       </div>
     </div>
   );
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '8px',
+  border: '1px solid #ddd',
+  marginTop: '8px'
+};
+
+const paymentOptionStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '14px 16px',
+  border: '1px solid #e5e5e5',
+  borderRadius: '10px',
+  background: 'white',
+  marginBottom: '12px',
+  cursor: 'pointer'
 };
 
 export default Checkout;
