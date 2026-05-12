@@ -20,7 +20,7 @@ const Cart = () => {
 
     const maxStock = Number(cartItem.variant?.stock) || 0;
     if (newQty > maxStock) {
-      toast.warning(`Chi con ${maxStock} san pham cho size nay`);
+      toast.warning(`Chỉ còn ${maxStock} sản phẩm cho size này`);
       updateQuantity(productId, size, maxStock);
       return;
     }
@@ -30,13 +30,13 @@ const Cart = () => {
 
   const handleRemove = (productId, size) => {
     removeFromCart(productId, size);
-    toast.success('Da xoa san pham khoi gio hang');
+    toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
   };
 
   const handleClearCart = () => {
-    if (window.confirm('Ban co chac muon xoa toan bo gio hang?')) {
+    if (window.confirm('Bạn có chắc muốn xóa toàn bộ giỏ hàng?')) {
       clearCart();
-      toast.success('Da xoa toan bo gio hang');
+      toast.success('Đã xóa toàn bộ giỏ hàng');
     }
   };
 
@@ -53,8 +53,8 @@ const Cart = () => {
   if (cart.length === 0) {
     return (
       <div style={{ padding: '100px 20px', textAlign: 'center', backgroundColor: '#F5F5F3', minHeight: '70vh' }}>
-        <h2 style={{ marginBottom: '20px' }}>Gio hang cua ban dang trong</h2>
-        <p style={{ color: '#666', marginBottom: '40px' }}>Hay them mot so san pham vao gio hang nhe!</p>
+        <h2 style={{ marginBottom: '20px' }}>Giỏ hàng của bạn đang trống</h2>
+        <p style={{ color: '#666', marginBottom: '40px' }}>Hãy thêm một vài sản phẩm để tiếp tục mua sắm.</p>
         <Link
           to="/products"
           style={{
@@ -66,7 +66,7 @@ const Cart = () => {
             fontWeight: '600'
           }}
         >
-          Kham pha san pham
+          Khám phá sản phẩm
         </Link>
       </div>
     );
@@ -76,7 +76,7 @@ const Cart = () => {
     <div style={{ padding: '40px 20px', backgroundColor: '#F5F5F3' }}>
       <div className="container" style={{ maxWidth: '1100px', margin: '0 auto' }}>
         <h1 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '36px' }}>
-          Gio hang cua ban
+          Giỏ hàng của bạn
         </h1>
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px' }}>
@@ -112,10 +112,10 @@ const Cart = () => {
                   <div style={{ flex: 1 }}>
                     <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>{item.name}</h3>
                     <p style={{ color: '#666', marginBottom: '12px' }}>
-                      Size: {item.variant.size} • So luong: {item.qty}
+                      Size: {item.variant.size} • Số lượng: {item.qty}
                     </p>
                     <p style={{ fontWeight: '600', fontSize: '18px', color: '#1A1A1B' }}>
-                      {item.price.toLocaleString('vi-VN')}d
+                      {item.price.toLocaleString('vi-VN')}đ
                     </p>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '15px' }}>
@@ -146,7 +146,7 @@ const Cart = () => {
 
                   <div style={{ textAlign: 'right', minWidth: '100px' }}>
                     <div style={{ fontWeight: '600', textAlign: 'right' }}>
-                      {(item.price * item.qty).toLocaleString('vi-VN')}d
+                      {(item.price * item.qty).toLocaleString('vi-VN')}đ
                     </div>
                   </div>
                 </div>
@@ -155,21 +155,21 @@ const Cart = () => {
           </div>
 
           <div style={{ background: 'white', padding: '30px', borderRadius: '12px', height: 'fit-content' }}>
-            <h3 style={{ marginBottom: '20px' }}>Tong don hang</h3>
+            <h3 style={{ marginBottom: '20px' }}>Tổng đơn hàng</h3>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '17px' }}>
-              <span>Tam tinh</span>
-              <span>{cartTotal.toLocaleString('vi-VN')}d</span>
+              <span>Tạm tính</span>
+              <span>{cartTotal.toLocaleString('vi-VN')}đ</span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px', fontSize: '17px' }}>
-              <span>Phi van chuyen</span>
-              <span style={{ color: '#27ae60' }}>Mien phi</span>
+              <span>Phí vận chuyển</span>
+              <span style={{ color: '#27ae60' }}>Miễn phí</span>
             </div>
 
             <div style={{ borderTop: '1px solid #eee', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', fontSize: '20px', fontWeight: '600' }}>
-              <span>Tong cong</span>
-              <span>{cartTotal.toLocaleString('vi-VN')}d</span>
+              <span>Tổng cộng</span>
+              <span>{cartTotal.toLocaleString('vi-VN')}đ</span>
             </div>
 
             <button
@@ -187,7 +187,7 @@ const Cart = () => {
                 cursor: 'pointer'
               }}
             >
-              TIEN HANH THANH TOAN
+              TIẾN HÀNH THANH TOÁN
             </button>
 
             <button
@@ -203,7 +203,7 @@ const Cart = () => {
                 cursor: 'pointer'
               }}
             >
-              Xoa toan bo gio hang
+              Xóa toàn bộ giỏ hàng
             </button>
           </div>
         </div>

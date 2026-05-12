@@ -1,89 +1,139 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product');
 const { io } = require('../socket');
+const {
+  validateAndBuildOrderItems,
+  reserveInventory,
+  releaseOrderInventory
+} = require('../services/orderService');
+const {
+  createVnpayTxnRef,
+  buildVnpayPaymentUrl,
+  getVnpayConfig
+} = require('../utils/vnpay');
 
-// ====================== CREATE ORDER (Customer) ======================
-exports.createOrder = async (req, res) => {
+function emitNewOrderCreated(order) {
   try {
-    const { items, shippingAddress } = req.body;
+    const payload = typeof order?.toObject === 'function' ? order.toObject() : order;
+    io.to('admins').emit('newOrderCreated', { order: payload });
+  } catch (emitError) {
+    console.error('Emit newOrderCreated failed:', emitError);
+  }
+}
 
-    let totalAmount = 0;
-    const orderItems = [];
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']
+    || req.connection?.remoteAddress
+    || req.socket?.remoteAddress
+    || '127.0.0.1';
+}
 
-    for (let item of items) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        return res.status(404).json({ success: false, message: `Không tìm thấy sản phẩm` });
-      }
+async function assignVnpayPaymentUrl(order, clientIp) {
+  order.paymentRef = createVnpayTxnRef();
 
-      const variant = product.variants.find(v => v.size === item.variant?.size);
+  const { paymentUrl, expireDate } = buildVnpayPaymentUrl({
+    amount: order.totalAmount,
+    ipAddr: clientIp,
+    txnRef: order.paymentRef,
+    orderInfo: `Thanh toan don hang ${order._id}`
+  });
 
-      if (!variant) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Lựa chọn không tồn tại` 
-        });
-      }
+  order.paymentUrlExpiresAt = new Date(
+    `${expireDate.slice(0, 4)}-${expireDate.slice(4, 6)}-${expireDate.slice(6, 8)}T${expireDate.slice(8, 10)}:${expireDate.slice(10, 12)}:${expireDate.slice(12, 14)}+07:00`
+  );
 
-      if (variant.stock < item.qty) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Sản phẩm không đủ hàng` 
-        });
-      }
+  return paymentUrl;
+}
 
-      const itemPrice = Number(product.price);
+exports.createOrder = async (req, res) => {
+  let order;
 
-      if (isNaN(itemPrice) || itemPrice < 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Giá sản phẩm không hợp lệ'
-        });
-      }
+  try {
+    const { items, shippingAddress, paymentMethod = 'COD' } = req.body;
+    const normalizedPaymentMethod = String(paymentMethod || 'COD').toUpperCase();
 
-      orderItems.push({
-        product: item.product,
-        variant: item.variant,
-        qty: item.qty,
-        price: itemPrice
+    if (!['COD', 'VNPAY'].includes(normalizedPaymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phuong thuc thanh toan khong hop le'
       });
-
-      totalAmount += itemPrice * item.qty;
     }
 
-    const order = await Order.create({
+    if (normalizedPaymentMethod === 'VNPAY') {
+      try {
+        getVnpayConfig();
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: 'VNPay chua duoc cau hinh tren backend'
+        });
+      }
+    }
+
+    const { orderItems, totalAmount } = await validateAndBuildOrderItems(items);
+    const reserveResult = await reserveInventory(orderItems);
+
+    if (!reserveResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: reserveResult.message
+      });
+    }
+
+    order = await Order.create({
       user: req.user._id,
       items: orderItems,
       shippingAddress,
       totalAmount,
-      paymentMethod: 'COD',           // Chỉ COD
+      paymentMethod: normalizedPaymentMethod,
+      paymentStatus: 'pending',
+      paymentRef: normalizedPaymentMethod === 'VNPAY' ? createVnpayTxnRef() : undefined,
+      inventoryAdjusted: true,
       orderStatus: 'pending'
     });
 
-    // Giảm tồn kho
-    for (let item of items) {
-      await Product.updateOne({
-        _id: item.product,
-        'variants.size': item.variant?.size
-      }, {
-        $inc: { 'variants.$.stock': -item.qty }
+    if (normalizedPaymentMethod === 'COD') {
+      emitNewOrderCreated(order);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Tao don hang COD thanh cong',
+        order
       });
     }
 
-    // 🔔 Thông báo real-time cho admin khi có đơn hàng mới
-    io.emit('newOrderCreated', { order });
+    const paymentUrl = await assignVnpayPaymentUrl(order, getClientIp(req));
+    await order.save();
 
-    res.status(201).json({ 
-      success: true, 
-      message: 'Tạo đơn hàng COD thành công',
-      order 
+    emitNewOrderCreated(order);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tao don hang VNPAY thanh cong',
+      order,
+      paymentUrl
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Create order failed:', error);
+
+    if (order?.inventoryAdjusted) {
+      await releaseOrderInventory(order);
+    }
+
+    if (order?._id) {
+      await Order.deleteOne({ _id: order._id }).catch(() => null);
+    }
+
+    if (error.message === 'VNPAY config is missing') {
+      return res.status(400).json({
+        success: false,
+        message: 'VNPay chua duoc cau hinh tren backend'
+      });
+    }
+
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ====================== GET MY ORDERS ======================
 exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
@@ -96,7 +146,6 @@ exports.getMyOrders = async (req, res) => {
   }
 };
 
-// ====================== GET ORDER BY ID ======================
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -104,12 +153,11 @@ exports.getOrderById = async (req, res) => {
       .populate('user', 'name email phone');
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+      return res.status(404).json({ success: false, message: 'Khong tim thay don hang' });
     }
 
-    // Chỉ cho phép xem đơn của chính mình hoặc admin
     if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Không có quyền xem đơn hàng này' });
+      return res.status(403).json({ success: false, message: 'Khong co quyen xem don hang nay' });
     }
 
     res.json({ success: true, order });
@@ -118,7 +166,6 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-// ====================== ADMIN: GET ALL ORDERS ======================
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
@@ -132,38 +179,55 @@ exports.getAllOrders = async (req, res) => {
   }
 };
 
-// ====================== UPDATE ORDER STATUS & SHIPPING ADDRESS ======================
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderStatus, shippingAddress } = req.body;
     const order = await Order.findById(req.params.id);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
+      return res.status(404).json({ success: false, message: 'Khong tim thay don hang' });
     }
 
-    // Kiểm tra quyền
     const isOwner = order.user.toString() === req.user._id.toString();
     const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({ success: false, message: 'Bạn không có quyền thực hiện thao tác này' });
-    }
-
-    // Khách hàng chỉ được cập nhật khi đơn đang pending
-    if (!isAdmin && order.orderStatus !== 'pending') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Không thể chỉnh sửa đơn hàng này nữa' 
+      return res.status(403).json({
+        success: false,
+        message: 'Ban khong co quyen thuc hien thao tac nay'
       });
     }
 
-    // Cập nhật trạng thái (nếu có)
-    if (orderStatus) {
-      order.orderStatus = orderStatus;
+    if (!isAdmin && order.orderStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Khong the chinh sua don hang nay nua'
+      });
     }
 
-    // Cập nhật địa chỉ giao hàng (nếu có)
+    if (!isAdmin && orderStatus === 'cancelled' && order.paymentStatus === 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Don hang da thanh toan khong the huy tu phia khach hang'
+      });
+    }
+
+    if (orderStatus === 'cancelled' && order.paymentMethod === 'VNPAY' && order.paymentStatus === 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Don hang dang cho ket qua thanh toan VNPay, khong the huy luc nay'
+      });
+    }
+
+    if (orderStatus) {
+      order.orderStatus = orderStatus;
+
+      if (orderStatus === 'cancelled' && order.paymentStatus !== 'paid') {
+        await releaseOrderInventory(order);
+        order.paymentStatus = 'cancelled';
+      }
+    }
+
     if (shippingAddress) {
       order.shippingAddress = {
         ...order.shippingAddress,
@@ -173,7 +237,6 @@ exports.updateOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // 🔔 Gửi thông báo real-time đến customer qua Socket.IO
     if (orderStatus) {
       const userId = order.user.toString();
       io.to(userId).emit('orderStatusUpdated', {
@@ -182,20 +245,20 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Cập nhật đơn hàng thành công', 
-      order 
+    res.json({
+      success: true,
+      message: 'Cap nhat don hang thanh cong',
+      order
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// ====================== ADMIN: GET ORDERS TODAY ======================
+
 exports.getOrdersToday = async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Bắt đầu từ 00:00:00
+    today.setHours(0, 0, 0, 0);
 
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -203,12 +266,12 @@ exports.getOrdersToday = async (req, res) => {
     const orders = await Order.find({
       createdAt: { $gte: today, $lt: tomorrow }
     })
-    .sort({ createdAt: -1 })
-    .populate('user', 'name email phone')
-    .populate('items.product', 'name images');
+      .sort({ createdAt: -1 })
+      .populate('user', 'name email phone')
+      .populate('items.product', 'name images');
 
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((sum, currentOrder) => sum + currentOrder.totalAmount, 0);
 
     res.json({
       success: true,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import CartContext from './CartContextInstance';
 
 const clampQuantityToStock = (nextQty, stock) => {
@@ -6,6 +6,18 @@ const clampQuantityToStock = (nextQty, stock) => {
   if (safeStock <= 0) return 0;
   return Math.min(nextQty, safeStock);
 };
+
+const normalizeCartItem = (item) => ({
+  ...item,
+  product: item?.product?._id || item?.product || '',
+  variant: item?.variant
+    ? {
+        size: item.variant.size || '',
+        stock: Number(item.variant.stock) || 0
+      }
+    : null,
+  price: Number(item?.price) || Number(item?.product?.price) || 0
+});
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
@@ -16,29 +28,17 @@ export const CartProvider = ({ children }) => {
       const parsed = JSON.parse(savedCart);
       if (!Array.isArray(parsed)) return [];
 
-      // Migration: tự động sửa giỏ hàng cũ
-      return parsed.map(item => ({
-        ...item,
-        variant: item.variant
-          ? {
-              size: item.variant.size || '',
-              stock: Number(item.variant.stock) || 0
-            }
-          : null,
-        price: Number(item.price) || Number(item.product?.price) || 0
-      }));
+      return parsed.map(normalizeCartItem);
     } catch (error) {
-      console.error("Lỗi load cart:", error);
+      console.error('Loi load cart:', error);
       return [];
     }
   });
 
-  // Lưu cart vào localStorage mỗi khi thay đổi
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
-  // ====================== ADD TO CART ======================
   const addToCart = (product, variant, qty = 1) => {
     if (!product || !variant) return;
 
@@ -77,8 +77,8 @@ export const CartProvider = ({ children }) => {
             stock
           },
           qty: initialQty,
-          price: Number(product.price) || 0,
-        },
+          price: Number(product.price) || 0
+        }
       ];
     });
   };
@@ -110,6 +110,16 @@ export const CartProvider = ({ children }) => {
     localStorage.removeItem('cart');
   };
 
+  const replaceCart = (items = []) => {
+    if (!Array.isArray(items)) {
+      setCart([]);
+      localStorage.removeItem('cart');
+      return;
+    }
+
+    setCart(items.map(normalizeCartItem));
+  };
+
   const cartTotal = cart.reduce((total, item) => {
     const price = Number(item.price) || 0;
     return total + price * item.qty;
@@ -123,8 +133,9 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        replaceCart,
         cartTotal,
-        cartCount: cart.length,
+        cartCount: cart.length
       }}
     >
       {children}
