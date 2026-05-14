@@ -1,6 +1,7 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import AdminLayout from '../components/AdminLayout';
+import PageTransition from '../components/PageTransition';
 
 import Home from '../pages/customer/Home';
 import Login from '../pages/customer/Login';
@@ -24,86 +25,90 @@ import AddProduct from '../pages/admin/AddProduct';
 import EditProduct from '../pages/admin/EditProduct';
 
 const AppRouter = () => {
+  const location = useLocation();
+
   return (
-    <Routes>
-      <Route path="/" element={<Layout><Home /></Layout>} />
-      <Route path="/products" element={<Layout><Products /></Layout>} />
-      <Route path="/products/:id" element={<Layout><ProductDetail /></Layout>} />
-      <Route path="/cart" element={<Layout><Cart /></Layout>} />
-      <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
-      <Route path="/payment/vnpay-return" element={<Layout><VnpayReturn /></Layout>} />
-      <Route path="/profile" element={<Layout><Profile /></Layout>} />
-      <Route path="/orders" element={<Layout><Orders /></Layout>} />
-      <Route path="/orders/:id/edit" element={<Layout><OrderUpdate /></Layout>} />
+    <PageTransition>
+      <Routes location={location}>
+        <Route path="/" element={<Layout><Home /></Layout>} />
+        <Route path="/products" element={<Layout><Products /></Layout>} />
+        <Route path="/products/:id" element={<Layout><ProductDetail /></Layout>} />
+        <Route path="/cart" element={<Layout><Cart /></Layout>} />
+        <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
+        <Route path="/payment/vnpay-return" element={<Layout><VnpayReturn /></Layout>} />
+        <Route path="/profile" element={<Layout><Profile /></Layout>} />
+        <Route path="/orders" element={<Layout><Orders /></Layout>} />
+        <Route path="/orders/:id/edit" element={<Layout><OrderUpdate /></Layout>} />
 
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/admin"
-        element={(
-          <AdminLayout>
-            <AdminDashboard />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/products"
-        element={(
-          <AdminLayout>
-            <AdminProducts />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/categories"
-        element={(
-          <AdminLayout>
-            <AdminCategories />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/orders"
-        element={(
-          <AdminLayout>
-            <AdminOrders />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/customers"
-        element={(
-          <AdminLayout>
-            <AdminCustomers />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/accounts"
-        element={(
-          <AdminLayout>
-            <AdminAccounts />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/products/add"
-        element={(
-          <AdminLayout>
-            <AddProduct />
-          </AdminLayout>
-        )}
-      />
-      <Route
-        path="/admin/products/edit/:id"
-        element={(
-          <AdminLayout>
-            <EditProduct />
-          </AdminLayout>
-        )}
-      />
-    </Routes>
+        <Route
+          path="/admin"
+          element={(
+            <AdminLayout>
+              <AdminDashboard />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/products"
+          element={(
+            <AdminLayout>
+              <AdminProducts />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/categories"
+          element={(
+            <AdminLayout>
+              <AdminCategories />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/orders"
+          element={(
+            <AdminLayout>
+              <AdminOrders />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/customers"
+          element={(
+            <AdminLayout>
+              <AdminCustomers />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/accounts"
+          element={(
+            <AdminLayout>
+              <AdminAccounts />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/products/add"
+          element={(
+            <AdminLayout>
+              <AddProduct />
+            </AdminLayout>
+          )}
+        />
+        <Route
+          path="/admin/products/edit/:id"
+          element={(
+            <AdminLayout>
+              <EditProduct />
+            </AdminLayout>
+          )}
+        />
+      </Routes>
+    </PageTransition>
   );
 };
 

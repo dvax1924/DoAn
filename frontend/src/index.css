@@ -1,56 +1,74 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-background: #f5f5f3;
+  --color-accent: #1a1a1b;
+  --color-foreground: #1a1a1b;
+  --color-muted: #e8e8e6;
+  --color-muted-foreground: #6b6b6b;
+  --color-card: #ffffff;
+  --color-card-foreground: #1a1a1b;
+  --color-border: #e0e0de;
+  --color-primary: #1a1a1b;
+  --color-primary-foreground: #f5f5f3;
+  --color-secondary: #eaeae8;
+  --color-secondary-foreground: #1a1a1b;
+  --color-destructive: #b42318;
+  --color-ring: #1a1a1b;
+}
 
 :root {
-  --bg-color: #F5F5F3;
-  --text-color: #1A1A1B;
-  --accent-color: #1A1A1B;
+  --background: #f5f5f3;
+  --accent: #1a1a1b;
+  --bg-color: var(--background);
+  --text-color: var(--accent);
+  --accent-color: var(--accent);
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  body {
+    @apply bg-background text-accent font-sans antialiased;
+    line-height: 1.6;
+  }
+  
+  /* Remove focus outline from Recharts */
+  .recharts-wrapper,
+  .recharts-wrapper:focus,
+  .recharts-surface,
+  .recharts-surface:focus {
+    outline: none !important;
+  }
 }
 
-body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  line-height: 1.6;
-}
+@layer components {
+  .container {
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
 
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
+  .admin-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: #444 #1a1a1b;
+  }
 
-/* Grid sản phẩm 4 cột */
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-}
-/* ==================== SCROLLBAR ADMIN SIDEBAR ==================== */
-.admin-sidebar-nav {
-  scrollbar-width: thin;
-  scrollbar-color: #444 #1A1A1B;
-}
+  .admin-sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+  }
 
-.admin-sidebar-nav::-webkit-scrollbar {
-  width: 6px;
-}
+  .admin-sidebar-nav::-webkit-scrollbar-track {
+    background: #1a1a1b;
+    border-radius: 20px;
+  }
 
-.admin-sidebar-nav::-webkit-scrollbar-track {
-  background: #1A1A1B;
-  border-radius: 20px;
-}
+  .admin-sidebar-nav::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 20px;
+  }
 
-.admin-sidebar-nav::-webkit-scrollbar-thumb {
-  background: #444;
-  border-radius: 20px;
-}
-
-.admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  .admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
 }

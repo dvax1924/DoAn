@@ -1,8 +1,8 @@
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { GoldieToastContainer } from './components/ui/Toast';
 import AppRouter from './routes/AppRouter';
 
 function App() {
@@ -11,7 +11,7 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <AppRouter />
-          <ToastContainer position="top-right" autoClose={3000} />
+          <GoldieToastContainer />
         </CartProvider>
       </AuthProvider>
     </Router>

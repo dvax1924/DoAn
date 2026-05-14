@@ -2,8 +2,11 @@ const User = require('../models/User');
 const Order = require('../models/Order');
 const {
   emitUserProfileUpdated,
-  emitUserPasswordUpdated
+  emitUserPasswordUpdated,
+  emitAccountLocked,
+  emitAccountUnlocked
 } = require('../utils/userRealtime');
+const { normalizeIsActive } = require('../utils/accountStatus');
 
 // ====================== GET PROFILE ======================
 exports.getProfile = async (req, res) => {
@@ -19,9 +22,8 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { name, phone, addresses } = req.body;
-    
     const user = await User.findById(req.user._id);
-    
+
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (addresses) user.addresses = addresses;
@@ -30,8 +32,8 @@ exports.updateProfile = async (req, res) => {
 
     const updatedUser = emitUserProfileUpdated(user);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Cập nhật profile thành công',
       user: updatedUser
     });
@@ -48,19 +50,50 @@ exports.getAllUsers = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const userIds = users.map(user => user._id);
+    const userIdStrings = users.map(user => user._id.toString());
     const orderStats = await Order.aggregate([
-      { $match: { user: { $in: userIds } } },
-      { $group: { _id: '$user', totalOrders: { $sum: 1 } } }
+      {
+        $addFields: {
+          userIdString: { $toString: '$user' },
+          normalizedTotalAmount: {
+            $convert: {
+              input: '$totalAmount',
+              to: 'double',
+              onError: 0,
+              onNull: 0
+            }
+          }
+        }
+      },
+      { $match: { userIdString: { $in: userIdStrings } } },
+      {
+        $group: {
+          _id: '$userIdString',
+          totalOrders: { $sum: 1 },
+          totalSpent: {
+            $sum: {
+              $cond: [
+                { $ne: ['$orderStatus', 'cancelled'] },
+                '$normalizedTotalAmount',
+                0
+              ]
+            }
+          }
+        }
+      }
     ]);
 
     const orderCountMap = new Map(
-      orderStats.map(item => [item._id.toString(), item.totalOrders])
+      orderStats.map(item => [item._id, item.totalOrders])
+    );
+    const totalSpentMap = new Map(
+      orderStats.map(item => [item._id, item.totalSpent])
     );
 
     const accountUsers = users.map(user => ({
       ...user,
       totalOrders: orderCountMap.get(user._id.toString()) || 0,
+      totalSpent: totalSpentMap.get(user._id.toString()) || 0,
       passwordLabel: 'Đã mã hóa'
     }));
 
@@ -116,6 +149,8 @@ exports.deleteUserByAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy khách hàng' });
     }
 
+    emitAccountLocked(user._id);
+
     await Order.deleteMany({ user: user._id });
     await user.deleteOne();
 
@@ -128,7 +163,15 @@ exports.deleteUserByAdmin = async (req, res) => {
 // ====================== ADMIN: UPDATE USER STATUS ======================
 exports.updateUserStatus = async (req, res) => {
   try {
-    const { isActive } = req.body;
+    const isActive = normalizeIsActive(req.body.isActive);
+
+    if (isActive === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trạng thái tài khoản không hợp lệ'
+      });
+    }
+
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -138,7 +181,19 @@ exports.updateUserStatus = async (req, res) => {
     user.isActive = isActive;
     await user.save();
 
-    res.json({ success: true, message: 'Cập nhật trạng thái user thành công' });
+    if (isActive === false) {
+      emitAccountLocked(user._id);
+    } else {
+      emitAccountUnlocked(user._id);
+    }
+
+    const updatedUser = emitUserProfileUpdated(user);
+
+    res.json({
+      success: true,
+      message: 'Cập nhật trạng thái user thành công',
+      user: updatedUser
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

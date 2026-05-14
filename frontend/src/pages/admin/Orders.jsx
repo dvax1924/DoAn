@@ -1,18 +1,235 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
-import api from '../../api/axiosInstance';
-import socket from '../../api/socket';
-import { toast } from 'react-toastify';
-import { FaEye, FaPrint, FaSearch, FaSync } from 'react-icons/fa';
 
-const AdminOrders = () => {
+
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  ChevronDown,
+  Eye,
+  RefreshCw,
+  X,
+  Package,
+  User,
+  CreditCard,
+  Truck,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  ShoppingBag,
+  Printer
+} from "lucide-react";
+import api from "../../api/axiosInstance";
+import socket from "../../api/socket";
+import { toast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils";
+import { TableSkeleton, ORDERS_COLUMNS } from "@/components/ui/TableSkeleton";
+
+const statusOptions = [
+  { value: "all", label: "Tất cả trạng thái" },
+  { value: "pending", label: "Chờ xử lý" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "cancelled", label: "Đã hủy" },
+];
+
+const statusConfig = {
+  pending: {
+    label: "Chờ xử lý",
+    color: "bg-amber-100 text-amber-700",
+    icon: Clock,
+  },
+  confirmed: {
+    label: "Đã xác nhận",
+    color: "bg-blue-100 text-blue-700",
+    icon: CheckCircle,
+  },
+  cancelled: {
+    label: "Đã hủy",
+    color: "bg-red-100 text-red-700",
+    icon: AlertCircle,
+  }
+};
+
+const statusFlow = ["pending", "confirmed"];
+
+// Helpers from old code
+const convertThreeDigitsToVietnamese = (number) => {
+  const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  const hundreds = Math.floor(number / 100);
+  const tens = Math.floor((number % 100) / 10);
+  const ones = number % 10;
+  let result = '';
+
+  if (hundreds > 0) {
+    result += `${digits[hundreds]} trăm`;
+    if (tens === 0 && ones > 0) {
+      result += ' lẻ';
+    }
+  }
+
+  if (tens > 1) {
+    result += `${result ? ' ' : ''}${digits[tens]} mươi`;
+    if (ones === 1) {
+      result += ' mốt';
+    } else if (ones === 4) {
+      result += ' tư';
+    } else if (ones === 5) {
+      result += ' lăm';
+    } else if (ones > 0) {
+      result += ` ${digits[ones]}`;
+    }
+  } else if (tens === 1) {
+    result += `${result ? ' ' : ''}mười`;
+    if (ones === 5) {
+      result += ' lăm';
+    } else if (ones > 0) {
+      result += ` ${digits[ones]}`;
+    }
+  } else if (ones > 0) {
+    if (hundreds > 0) {
+      result += ` ${digits[ones]}`;
+    } else {
+      result += digits[ones];
+    }
+  }
+
+  return result.trim();
+};
+
+const convertNumberToVietnameseText = (value) => {
+  const number = Math.round(Number(value || 0));
+  if (number <= 0) return 'Không đồng';
+
+  const units = ['', 'nghìn', 'triệu', 'tỷ'];
+  const chunks = [];
+  let remaining = number;
+
+  while (remaining > 0) {
+    chunks.push(remaining % 1000);
+    remaining = Math.floor(remaining / 1000);
+  }
+
+  const parts = [];
+  for (let i = chunks.length - 1; i >= 0; i -= 1) {
+    const chunk = chunks[i];
+    if (chunk === 0) continue;
+
+    const chunkText = convertThreeDigitsToVietnamese(chunk);
+    const unit = units[i] || '';
+    parts.push(`${chunkText}${unit ? ` ${unit}` : ''}`.trim());
+  }
+
+  const sentence = parts.join(' ').replace(/\s+/g, ' ').trim();
+  return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)} đồng`;
+};
+
+const escapeHtml = (value) => String(value ?? '—')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(value);
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatOrderCode = (orderId) => `#${orderId?.toString().slice(-8).toUpperCase() || '--------'}`;
+
+const formatAddress = (shippingAddress) => {
+  if (!shippingAddress) return '—';
+  const fullAddress = [
+    shippingAddress.street,
+    shippingAddress.ward,
+    shippingAddress.district,
+    shippingAddress.province
+  ].filter(Boolean).join(', ');
+  return fullAddress || '—';
+};
+
+const formatPaymentMethodText = (paymentMethod) => {
+  switch (paymentMethod) {
+    case 'VNPAY': return 'VNPay';
+    case 'COD': return 'COD';
+    default: return paymentMethod || 'COD';
+  }
+};
+
+const formatPaymentStatusText = (paymentStatus) => {
+  switch (paymentStatus) {
+    case 'paid': return 'Đã thanh toán';
+    case 'pending': return 'Chờ thanh toán';
+    case 'failed': return 'Thanh toán thất bại';
+    case 'cancelled': return 'Đã hủy';
+    default: return paymentStatus || '—';
+  }
+};
+
+// Animation variants
+/** @type {import('framer-motion').Variants} */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 },
+  },
+};
+
+/** @type {import('framer-motion').Variants} */
+const rowVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.3, ease: "easeOut" },
+  },
+  exit: { opacity: 0, x: 20, transition: { duration: 0.2 } },
+};
+
+/** @type {import('framer-motion').Variants} */
+const modalVariants = {
+  hidden: { opacity: 0, scale: 0.95, y: 20 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: "easeOut" },
+  },
+  exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2 } },
+};
+
+/** @type {import('framer-motion').Variants} */
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
+  // Fetch logic
   const fetchOrders = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -31,19 +248,17 @@ const AdminOrders = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  // 🔔 Socket.IO: Lắng nghe đơn hàng mới từ customer real-time
+  // Socket logic
   useEffect(() => {
     if (!socket.connected) {
       socket.connect();
     }
     socket.emit('joinAdmin');
 
-    socket.on('newOrderCreated', (data) => {
+    const handleNewOrder = (data) => {
       const { order } = data;
-
       let isNewOrder = false;
 
-      // Tránh trùng đơn khi cùng một đơn được đồng bộ nhiều lần
       setOrders((prev) => {
         const exists = prev.some((item) => item._id === order._id);
         isNewOrder = !exists;
@@ -53,11 +268,10 @@ const AdminOrders = () => {
       if (isNewOrder) {
         toast.info(`📦 Đơn hàng mới #${order._id.slice(-8).toUpperCase()} - ${order.totalAmount?.toLocaleString('vi-VN')}đ`);
       }
-    });
+    };
 
-    socket.on('orderPaymentUpdated', (data) => {
+    const handlePaymentUpdate = (data) => {
       const { orderId, paymentStatus, orderStatus } = data;
-
       setOrders((prev) =>
         prev.map((order) =>
           order._id === orderId
@@ -65,248 +279,95 @@ const AdminOrders = () => {
             : order
         )
       );
-
       fetchOrders();
-
       if (orderStatus === 'cancelled') {
         toast.info(`Thanh toán VNPay của đơn #${orderId.slice(-8).toUpperCase()} đã bị hủy hoặc thất bại`);
       }
-    });
+    };
+
+    socket.on('newOrderCreated', handleNewOrder);
+    socket.on('orderPaymentUpdated', handlePaymentUpdate);
 
     return () => {
-      socket.off('newOrderCreated');
-      socket.off('orderPaymentUpdated');
+      socket.off('newOrderCreated', handleNewOrder);
+      socket.off('orderPaymentUpdated', handlePaymentUpdate);
     };
   }, [fetchOrders]);
 
-  // ==================== LỌC ĐƠN HÀNG (ĐÃ SỬA HOÀN CHỈNH) ====================
+  // Filter orders
   const filteredOrders = useMemo(() => {
-    const searchLower = searchTerm.toLowerCase().trim();
+    const searchLower = searchQuery.toLowerCase().trim();
 
     return orders.filter((order) => {
-      // Kiểm tra tìm kiếm (mã đơn, tên khách, SĐT)
       let matchesSearch = true;
 
       if (searchLower) {
-        const orderIdStr = order._id.toString().toLowerCase();
-        const shortId = order._id.toString().slice(-8).toLowerCase();
-
-        const idMatch = 
-          orderIdStr.includes(searchLower) || 
-          shortId.includes(searchLower) ||
-          searchLower.includes(shortId);
-
-        const nameMatch = (order.shippingAddress?.name || '')
-          .toLowerCase()
-          .includes(searchLower);
-
-        const phoneMatch = (order.shippingAddress?.phone || '')
-          .toLowerCase()
-          .includes(searchLower);
-
+        const orderIdStr = order._id?.toString().toLowerCase() || "";
+        const shortId = order._id?.toString().slice(-8).toLowerCase() || "";
+        const idMatch = orderIdStr.includes(searchLower) || shortId.includes(searchLower) || searchLower.includes(shortId);
+        const nameMatch = (order.shippingAddress?.name || '').toLowerCase().includes(searchLower);
+        const phoneMatch = (order.shippingAddress?.phone || '').toLowerCase().includes(searchLower);
         matchesSearch = idMatch || nameMatch || phoneMatch;
       }
 
-      // Kiểm tra lọc trạng thái
-      if (statusFilter === 'all') {
-        return matchesSearch;
-      }
-      return matchesSearch && order.orderStatus === statusFilter;
+      const matchesStatus = selectedStatus === "all" || order.orderStatus === selectedStatus;
+
+      return matchesSearch && matchesStatus;
     });
-  }, [orders, searchTerm, statusFilter]);
+  }, [orders, searchQuery, selectedStatus]);
 
-  const updateStatus = async (orderId, newStatus) => {
-    try {
-      await api.put(`/orders/${orderId}/status`, { orderStatus: newStatus });
-      toast.success("Cập nhật trạng thái thành công");
-      fetchOrders();
-    } catch {
-      toast.error("Không thể cập nhật trạng thái");
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#f39c12';
-      case 'confirmed': return '#3498db';
-      case 'cancelled': return '#e74c3c';
-      default: return '#666';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'pending': return 'Đang chờ xác nhận';
-      case 'confirmed': return 'Đã xác nhận';
-      case 'cancelled': return 'Đã hủy';
-      default: return status;
-    }
-  };
-
-  const formatOrderCode = (orderId) => `#${orderId?.toString().slice(-8).toUpperCase() || '--------'}`;
-
-  const formatCurrency = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')}đ`;
-
-  const formatOrderDate = (date, includeTime = false) => {
-    if (!date) return '—';
-
-    return new Date(date).toLocaleString(
-      'vi-VN',
-      includeTime
-        ? {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }
-        : {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          }
-    );
-  };
-
-  const formatAddress = (shippingAddress) => {
-    if (!shippingAddress) return '—';
-
-    const fullAddress = [
-      shippingAddress.street,
-      shippingAddress.ward,
-      shippingAddress.district,
-      shippingAddress.province
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    return fullAddress || '—';
-  };
-
-  const formatPaymentMethodText = (paymentMethod) => {
-    switch (paymentMethod) {
-      case 'VNPAY':
-        return 'VNPay';
-      case 'COD':
-        return 'COD';
-      default:
-        return paymentMethod || 'COD';
-    }
-  };
-
-  const formatPaymentStatusText = (paymentStatus) => {
-    switch (paymentStatus) {
-      case 'paid':
-        return 'Đã thanh toán';
-      case 'pending':
-        return 'Chờ thanh toán';
-      case 'failed':
-        return 'Thanh toán thất bại';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return paymentStatus || '—';
-    }
-  };
-
-  const convertThreeDigitsToVietnamese = (number) => {
-    const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-    const hundreds = Math.floor(number / 100);
-    const tens = Math.floor((number % 100) / 10);
-    const ones = number % 10;
-    let result = '';
-
-    if (hundreds > 0) {
-      result += `${digits[hundreds]} trăm`;
-      if (tens === 0 && ones > 0) {
-        result += ' lẻ';
-      }
-    }
-
-    if (tens > 1) {
-      result += `${result ? ' ' : ''}${digits[tens]} mươi`;
-      if (ones === 1) {
-        result += ' mốt';
-      } else if (ones === 4) {
-        result += ' tư';
-      } else if (ones === 5) {
-        result += ' lăm';
-      } else if (ones > 0) {
-        result += ` ${digits[ones]}`;
-      }
-    } else if (tens === 1) {
-      result += `${result ? ' ' : ''}mười`;
-      if (ones === 5) {
-        result += ' lăm';
-      } else if (ones > 0) {
-        result += ` ${digits[ones]}`;
-      }
-    } else if (ones > 0) {
-      if (hundreds > 0) {
-        result += ` ${digits[ones]}`;
-      } else {
-        result += digits[ones];
-      }
-    }
-
-    return result.trim();
-  };
-
-  const convertNumberToVietnameseText = (value) => {
-    const number = Math.round(Number(value || 0));
-    if (number <= 0) return 'Không đồng';
-
-    const units = ['', 'nghìn', 'triệu', 'tỷ'];
-    const chunks = [];
-    let remaining = number;
-
-    while (remaining > 0) {
-      chunks.push(remaining % 1000);
-      remaining = Math.floor(remaining / 1000);
-    }
-
-    const parts = [];
-    for (let i = chunks.length - 1; i >= 0; i -= 1) {
-      const chunk = chunks[i];
-      if (chunk === 0) continue;
-
-      const chunkText = convertThreeDigitsToVietnamese(chunk);
-      const unit = units[i] || '';
-      parts.push(`${chunkText}${unit ? ` ${unit}` : ''}`.trim());
-    }
-
-    const sentence = parts.join(' ').replace(/\s+/g, ' ').trim();
-    return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)} đồng`;
-  };
-
-  const escapeHtml = (value) => String(value ?? '—')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-  const openOrderDetails = async (orderId) => {
-    setShowDetailModal(true);
-    setDetailLoading(true);
+  const openOrderModal = async (orderId) => {
+    setIsModalOpen(true);
     setSelectedOrder(null);
-
     try {
       const res = await api.get(`/orders/${orderId}`);
       setSelectedOrder(res.data.order || res.data);
     } catch (error) {
       console.error(error);
       toast.error("Không thể tải chi tiết đơn hàng");
-      setShowDetailModal(false);
-    } finally {
-      setDetailLoading(false);
+      setIsModalOpen(false);
     }
   };
 
-  const closeOrderDetails = () => {
-    setShowDetailModal(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
     setSelectedOrder(null);
-    setDetailLoading(false);
+  };
+
+  const getNextStatus = (currentStatus) => {
+    const currentIndex = statusFlow.indexOf(currentStatus);
+    if (currentIndex >= 0 && currentIndex < statusFlow.length - 1) {
+      return statusFlow[currentIndex + 1];
+    }
+    return null;
+  };
+
+  const handleUpdateStatus = async (newStatus = null) => {
+    if (!selectedOrder) return;
+    
+    const nextStatus = newStatus || getNextStatus(selectedOrder.orderStatus);
+    if (!nextStatus) return;
+
+    setIsUpdating(true);
+    
+    try {
+      await api.put(`/orders/${selectedOrder._id}/status`, { orderStatus: nextStatus });
+      toast.success("Cập nhật trạng thái thành công");
+      
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === selectedOrder._id
+            ? { ...order, orderStatus: nextStatus }
+            : order
+        )
+      );
+
+      setSelectedOrder((prev) => prev ? { ...prev, orderStatus: nextStatus } : null);
+    } catch {
+      toast.error("Không thể cập nhật trạng thái");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const printInvoice = () => {
@@ -596,7 +657,7 @@ const AdminOrders = () => {
               </div>
               <div class="line-field">
                 <span class="label">Ngày mua:</span>
-                <span class="value">${escapeHtml(formatOrderDate(selectedOrder.createdAt, true))}</span>
+                <span class="value">${escapeHtml(formatDate(selectedOrder.createdAt))}</span>
               </div>
               <div class="line-field">
                 <span class="label">Thanh toán:</span>
@@ -667,381 +728,522 @@ const AdminOrders = () => {
     };
   };
 
-  if (loading) {
-    return <p style={{ textAlign: 'center', padding: '100px' }}>Đang tải đơn hàng...</p>;
-  }
-
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ fontSize: '32px', margin: 0 }}>Quản lý Đơn hàng</h1>
-        <button 
-          onClick={fetchOrders}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#1A1A1B',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer'
-          }}
+    <div className="min-h-screen bg-[#F5F4F0]">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <FaSync /> Tải lại
-        </button>
-      </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-[#1A1A1B] sm:text-3xl">
+              Quản lý Đơn hàng
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Theo dõi và cập nhật trạng thái đơn hàng
+            </p>
+          </div>
+          <button
+            onClick={fetchOrders}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#1A1A1B] px-4 py-2.5 text-sm font-medium text-white shadow-lg transition-all hover:bg-black hover:shadow-xl"
+          >
+            <RefreshCw className="h-4 w-4" strokeWidth={2} />
+            Tải lại
+          </button>
+        </motion.div>
 
-      {/* Thanh tìm kiếm + Lọc trạng thái */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-        <div style={{ flex: 1, background: 'white', padding: '12px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center' }}>
-          <FaSearch style={{ marginRight: '12px', color: '#999' }} />
-          <input
-            type="text"
-            placeholder="Tìm theo mã đơn, tên khách hoặc SĐT..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px' }}
-          />
-        </div>
-
-        <select 
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid #ddd', background: 'white' }}
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center"
         >
-          <option value="all">Tất cả</option>
-          <option value="pending">Đang chờ xác nhận</option>
-          <option value="confirmed">Đã xác nhận</option>
-          <option value="cancelled">Đã hủy</option>
-        </select>
-      </div>
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search
+              className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+              strokeWidth={1.5}
+            />
+            <input
+              type="text"
+              placeholder="Tìm kiếm mã đơn hàng, tên khách hoặc SĐT..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border-0 bg-white py-3.5 pl-12 pr-4 text-sm text-[#1A1A1B] placeholder-gray-400 shadow-sm ring-1 ring-inset ring-gray-200 transition-all focus:outline-none focus:ring-2 focus:ring-[#1A1A1B]"
+            />
+          </div>
 
-      {/* Bảng - Căn giữa toàn bộ */}
-      <div style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 6px 20px rgba(0,0,0,0.06)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f8f8f8', borderBottom: '2px solid #eee' }}>
-              <th style={thCenterStyle}>Mã đơn</th>
-              <th style={thCenterStyle}>Khách hàng</th>
-              <th style={thCenterStyle}>SĐT</th>
-              <th style={thCenterStyle}>Tổng tiền</th>
-              <th style={thCenterStyle}>Ngày đặt</th>
-              <th style={thCenterStyle}>Trạng thái</th>
-              <th style={thCenterStyle}>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredOrders.map((order) => (
-              <tr key={order._id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={tdCenterStyle}>{formatOrderCode(order._id)}</td>
-                <td style={{ ...tdCenterStyle, whiteSpace: 'nowrap' }}>{order.shippingAddress?.name || '—'}</td>
-                <td style={tdCenterStyle}>{order.shippingAddress?.phone || '—'}</td>
-                <td style={tdCenterStyle}>
-                  {formatCurrency(order.totalAmount)}
-                </td>
-                <td style={tdCenterStyle}>
-                  {formatOrderDate(order.createdAt)}
-                </td>
-                <td style={tdCenterStyle}>
-                  <span style={{
-                    padding: '8px 18px',
-                    borderRadius: '30px',
-                    fontSize: '14px',
-                    backgroundColor: getStatusColor(order.orderStatus) + '20',
-                    color: getStatusColor(order.orderStatus),
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    whiteSpace: 'nowrap',
-                    minWidth: '180px'
-                  }}>
-                    {getStatusText(order.orderStatus)}
-                  </span>
-                </td>
-                <td style={tdCenterStyle}>
-                  <div style={actionControlsStyle}>
-                    <button
-                      onClick={() => openOrderDetails(order._id)}
-                      style={actionButtonStyle}
-                    >
-                      <FaEye /> Chi tiết
-                    </button>
+          {/* Status Filter */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className="inline-flex min-w-48 items-center justify-between gap-2 rounded-xl bg-white px-4 py-3.5 text-sm font-medium text-[#1A1A1B] shadow-sm ring-1 ring-inset ring-gray-200 transition-all hover:ring-gray-300"
+            >
+              <span>
+                {statusOptions.find((s) => s.value === selectedStatus)?.label}
+              </span>
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform", isStatusDropdownOpen && "rotate-180")}
+                strokeWidth={2}
+              />
+            </motion.button>
 
-                    {order.orderStatus === 'cancelled' ? (
-                      <span style={actionStatusTextStyle}>Đã hủy</span>
-                    ) : (
-                      <select
-                        value={order.orderStatus}
-                        onChange={(e) => updateStatus(order._id, e.target.value)}
-                        style={actionSelectStyle}
-                      >
-                        {order.orderStatus === 'pending' && <option value="pending">Đang chờ</option>}
-                        <option value="confirmed">Xác nhận</option>
-                        <option value="cancelled">Hủy</option>
-                      </select>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredOrders.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 20px', color: '#666' }}>
-          <p style={{ fontSize: '18px' }}>Không tìm thấy đơn hàng nào phù hợp</p>
-        </div>
-      )}
-
-      {showDetailModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
-              <div>
-                <h2 style={{ margin: '0 0 8px', fontSize: '28px' }}>Chi tiết đơn hàng</h2>
-                <p style={{ margin: 0, color: '#666' }}>
-                  {selectedOrder ? formatOrderCode(selectedOrder._id) : 'Đang tải dữ liệu đơn hàng...'}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {!detailLoading && selectedOrder?.orderStatus === 'confirmed' && (
-                  <button
-                    onClick={printInvoice}
-                    style={{
-                      padding: '10px 18px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: '#1A1A1B',
-                      color: 'white',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    <FaPrint /> In hóa đơn
-                  </button>
-                )}
-
-                <button
-                  onClick={closeOrderDetails}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '10px',
-                    border: '1px solid #ddd',
-                    background: 'white',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
+            <AnimatePresence>
+              {isStatusDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 z-20 mt-2 w-full min-w-48 rounded-xl bg-white py-2 shadow-xl ring-1 ring-gray-200"
                 >
-                  Đóng
-                </button>
+                  {statusOptions.map((status) => (
+                    <button
+                      key={status.value}
+                      onClick={() => {
+                        setSelectedStatus(status.value);
+                        setIsStatusDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2.5 text-left text-sm transition-colors",
+                        selectedStatus === status.value
+                          ? "bg-[#F5F4F0] font-medium text-[#1A1A1B]"
+                          : "text-gray-600 hover:bg-gray-50"
+                      )}
+                    >
+                      {status.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Orders Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          {loading ? (
+            <TableSkeleton rows={6} columns={ORDERS_COLUMNS} />
+          ) : (
+            <div
+              className="overflow-hidden rounded-2xl bg-white shadow-sm"
+              style={{ boxShadow: "0 4px 24px -4px rgba(0, 0, 0, 0.06)" }}
+            >
+              {/* Table Header */}
+              <div className="hidden border-b border-gray-100 bg-gray-50/50 px-6 py-4 lg:grid lg:grid-cols-12 lg:gap-4">
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Mã đơn
+                </div>
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Ngày đặt
+                </div>
+                <div className="col-span-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Khách hàng
+                </div>
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Tổng tiền
+                </div>
+                <div className="col-span-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Trạng thái
+                </div>
+                <div className="col-span-1 text-xs font-semibold uppercase tracking-wider text-gray-500 text-right whitespace-nowrap">
+                  Hành động
+                </div>
               </div>
+
+              {/* Table Body */}
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <AnimatePresence>
+                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map((order) => {
+                      const statusInfo = statusConfig[order.orderStatus] || statusConfig.pending;
+                      const StatusIcon = statusInfo.icon;
+                      return (
+                        <motion.div
+                          key={order._id}
+                          variants={rowVariants}
+                          exit="exit"
+                          layout
+                          whileHover={{ backgroundColor: "rgba(245, 244, 240, 0.5)" }}
+                          className="grid grid-cols-1 gap-4 border-b border-gray-100 px-6 py-5 transition-colors last:border-b-0 lg:grid-cols-12 lg:items-center"
+                        >
+                          {/* Order ID */}
+                          <div className="col-span-2">
+                            <p className="font-semibold text-[#1A1A1B]">
+                              {formatOrderCode(order._id)}
+                            </p>
+                          </div>
+
+                          {/* Date */}
+                          <div className="col-span-2">
+                            <p className="text-sm text-gray-600">
+                              {formatDate(order.createdAt)}
+                            </p>
+                          </div>
+
+                          {/* Customer */}
+                          <div className="col-span-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#F5F4F0]">
+                                <User
+                                  className="h-5 w-5 text-[#1A1A1B]"
+                                  strokeWidth={1.5}
+                                />
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#1A1A1B]">
+                                  {order.shippingAddress?.name || order.user?.name || '—'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {order.shippingAddress?.phone || order.user?.phone || '—'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Total */}
+                          <div className="col-span-2">
+                            <p className="font-semibold text-[#1A1A1B]">
+                              {formatCurrency(order.totalAmount)}
+                            </p>
+                          </div>
+
+                          {/* Status */}
+                          <div className="col-span-2">
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
+                                statusInfo.color
+                              )}
+                            >
+                              <StatusIcon className="h-3.5 w-3.5" strokeWidth={2} />
+                              {statusInfo.label}
+                            </span>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="col-span-1 flex items-center justify-end gap-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => openOrderModal(order._id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5F4F0] px-3 py-2 text-xs font-medium text-[#1A1A1B] transition-colors hover:bg-[#1A1A1B] hover:text-white"
+                            >
+                              <Eye className="h-3.5 w-3.5" strokeWidth={2} />
+                              Xem
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col items-center justify-center py-16 text-center"
+                    >
+                      <ShoppingBag
+                        className="mb-4 h-12 w-12 text-gray-300"
+                        strokeWidth={1}
+                      />
+                      <p className="text-sm font-medium text-gray-500">
+                        Không tìm thấy đơn hàng nào
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        Thử thay đổi bộ lọc tìm kiếm
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </div>
+          )}
+        </motion.div>
 
-            {detailLoading && (
-              <p style={{ textAlign: 'center', padding: '40px 0', margin: 0 }}>
-                Đang tải chi tiết đơn hàng...
-              </p>
-            )}
+        {/* Order Count */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mt-4 text-center text-sm text-gray-500"
+        >
+          Hiển thị {filteredOrders.length} / {orders.length} đơn hàng
+        </motion.div>
+      </div>
 
-            {!detailLoading && selectedOrder && (
-              <>
-                <div style={detailGridStyle}>
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Mã đơn</p>
-                    <p style={detailValueStyle}>{formatOrderCode(selectedOrder._id)}</p>
+      {/* Order Detail Modal */}
+      <AnimatePresence>
+        {isModalOpen && selectedOrder && (
+          <motion.div
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+            onClick={closeModal}
+          >
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 sm:p-8"
+              style={{ boxShadow: "0 24px 48px -12px rgba(0, 0, 0, 0.18)" }}
+            >
+              {/* Modal Header */}
+              <div className="mb-6 flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-[#1A1A1B]">
+                    Chi tiết đơn hàng
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {formatOrderCode(selectedOrder._id)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedOrder.orderStatus !== 'cancelled' && selectedOrder.orderStatus !== 'pending' && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={printInvoice}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#F5F4F0] px-3 py-2 text-sm font-medium text-[#1A1A1B] transition-colors hover:bg-gray-200"
+                    >
+                      <Printer className="h-4 w-4" strokeWidth={2} />
+                      In hóa đơn
+                    </motion.button>
+                  )}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={closeModal}
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  >
+                    <X className="h-5 w-5" strokeWidth={2} />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Order Status */}
+              <div className="mb-6 rounded-xl bg-[#F5F4F0]/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const statusInfo = statusConfig[selectedOrder.orderStatus] || statusConfig.pending;
+                      const StatusIcon = statusInfo.icon;
+                      return (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium",
+                            statusInfo.color
+                          )}
+                        >
+                          <StatusIcon className="h-4 w-4" strokeWidth={2} />
+                          {statusInfo.label}
+                        </span>
+                      );
+                    })()}
                   </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Ngày mua</p>
-                    <p style={detailValueStyle}>{formatOrderDate(selectedOrder.createdAt, true)}</p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Giá tiền</p>
-                    <p style={detailValueStyle}>{formatCurrency(selectedOrder.totalAmount)}</p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Phương thức thanh toán</p>
-                    <p style={detailValueStyle}>{formatPaymentMethodText(selectedOrder.paymentMethod)}</p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Trạng thái thanh toán</p>
-                    <p style={detailValueStyle}>{formatPaymentStatusText(selectedOrder.paymentStatus)}</p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Tên khách hàng</p>
-                    <p style={detailValueStyle}>
-                      {selectedOrder.shippingAddress?.name || selectedOrder.user?.name || '—'}
-                    </p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Số điện thoại</p>
-                    <p style={detailValueStyle}>
-                      {selectedOrder.shippingAddress?.phone || selectedOrder.user?.phone || '—'}
-                    </p>
-                  </div>
-
-                  <div style={detailCardStyle}>
-                    <p style={detailLabelStyle}>Địa chỉ</p>
-                    <p style={detailValueStyle}>{formatAddress(selectedOrder.shippingAddress)}</p>
+                  <div className="flex items-center gap-2">
+                    {selectedOrder.orderStatus === 'pending' && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleUpdateStatus('cancelled')}
+                        disabled={isUpdating}
+                        className="inline-flex items-center gap-2 rounded-xl bg-red-50 text-red-600 px-4 py-2.5 text-sm font-medium transition-all hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Hủy đơn
+                      </motion.button>
+                    )}
+                    {selectedOrder.orderStatus === 'pending' && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleUpdateStatus('confirmed')}
+                        disabled={isUpdating}
+                        className="inline-flex items-center gap-2 rounded-xl bg-[#1A1A1B] px-4 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isUpdating ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" strokeWidth={2} />
+                        )}
+                        Xác nhận
+                      </motion.button>
+                    )}
                   </div>
                 </div>
 
-                <div style={{ marginTop: '24px' }}>
-                  <p style={{ ...detailLabelStyle, marginBottom: '12px' }}>Tên sản phẩm</p>
+                {/* Status Progress */}
+                {selectedOrder.orderStatus !== 'cancelled' && (
+                  <div className="mt-4 flex items-center justify-between">
+                    {statusFlow.map((status, index) => {
+                      const isCompleted =
+                        statusFlow.indexOf(selectedOrder.orderStatus) >= index;
+                      const isCurrent = selectedOrder.orderStatus === status;
+                      return (
+                        <div key={status} className="flex flex-1 items-center">
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors",
+                                isCompleted
+                                  ? "bg-[#1A1A1B] text-white"
+                                  : "bg-gray-200 text-gray-500",
+                                isCurrent && "ring-2 ring-[#1A1A1B] ring-offset-2"
+                              )}
+                            >
+                              {index + 1}
+                            </div>
+                            <span
+                              className={cn(
+                                "mt-1.5 text-xs",
+                                isCompleted ? "font-medium text-[#1A1A1B]" : "text-gray-400"
+                              )}
+                            >
+                              {statusConfig[status].label}
+                            </span>
+                          </div>
+                          {index < statusFlow.length - 1 && (
+                            <div
+                              className={cn(
+                                "mx-2 h-0.5 flex-1 transition-colors",
+                                statusFlow.indexOf(selectedOrder.orderStatus) > index
+                                  ? "bg-[#1A1A1B]"
+                                  : "bg-gray-200"
+                              )}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {selectedOrder.items?.length ? (
-                      selectedOrder.items.map((item, index) => (
-                        <div
-                          key={`${item.product?._id || item.product || 'item'}-${index}`}
-                          style={{
-                            border: '1px solid #eee',
-                            borderRadius: '12px',
-                            padding: '16px 18px',
-                            background: '#fafafa'
-                          }}
-                        >
-                          <p style={{ margin: '0 0 8px', fontWeight: '600', color: '#1A1A1B' }}>
-                            {item.product?.name || 'Sản phẩm không xác định'}
-                          </p>
-                          <p style={{ margin: '0 0 4px', color: '#555' }}>
-                            Số lượng: {item.qty} {item.variant?.size ? `| Size: ${item.variant.size}` : ''}
-                          </p>
-                          <p style={{ margin: 0, color: '#555' }}>
-                            Đơn giá: {formatCurrency(item.price)}
+              {/* Customer Info */}
+              <div className="mb-6">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1A1A1B]">
+                  <User className="h-4 w-4" strokeWidth={2} />
+                  Thông tin khách hàng
+                </h3>
+                <div className="rounded-xl bg-gray-50 p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Họ tên</p>
+                      <p className="font-medium text-[#1A1A1B]">
+                        {selectedOrder.shippingAddress?.name || selectedOrder.user?.name || '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Số điện thoại</p>
+                      <p className="font-medium text-[#1A1A1B]">
+                        {selectedOrder.shippingAddress?.phone || selectedOrder.user?.phone || '—'}
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-gray-500">Địa chỉ</p>
+                      <p className="font-medium text-[#1A1A1B]">
+                        {formatAddress(selectedOrder.shippingAddress)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="mb-6">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1A1A1B]">
+                  <Package className="h-4 w-4" strokeWidth={2} />
+                  Sản phẩm ({selectedOrder.items?.length || 0})
+                </h3>
+                <div className="space-y-3">
+                  {selectedOrder.items?.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-gray-200 overflow-hidden">
+                          {item.product?.images?.[0] ? (
+                            <img src={item.product.images[0]} alt={item.product?.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <Package className="h-full w-full p-3 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#1A1A1B]">{item.product?.name || "Sản phẩm đã xóa"}</p>
+                          <p className="text-xs text-gray-500">
+                            Size: {item.variant?.size || '—'} | Số lượng: {item.qty}
                           </p>
                         </div>
-                      ))
-                    ) : (
-                      <div style={{ ...detailCardStyle, textAlign: 'center' }}>
-                        Không có dữ liệu sản phẩm
                       </div>
-                    )}
+                      <p className="font-semibold text-[#1A1A1B]">
+                        {formatCurrency(item.price * item.qty)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              <div className="rounded-xl bg-[#F5F4F0]/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" strokeWidth={1.5} /> PTTT
+                      </p>
+                      <span className="text-sm font-medium text-[#1A1A1B]">
+                        {formatPaymentMethodText(selectedOrder.paymentMethod)}
+                      </span>
+                    </div>
+                    <div className="w-px h-8 bg-gray-300"></div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" strokeWidth={1.5} /> Thanh toán
+                      </p>
+                      <span className="text-sm font-medium text-[#1A1A1B]">
+                        {formatPaymentStatusText(selectedOrder.paymentStatus)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Tổng cộng</p>
+                    <p className="text-xl font-bold text-[#1A1A1B]">
+                      {formatCurrency(selectedOrder.totalAmount)}
+                    </p>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+              </div>
+
+              {/* Close Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={closeModal}
+                className="mt-6 w-full rounded-xl border border-gray-300 bg-white py-3.5 text-sm font-medium text-[#1A1A1B] transition-colors hover:bg-gray-50"
+              >
+                Đóng
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-};
-
-/* ==================== STYLE CĂN GIỮA ==================== */
-const thCenterStyle = {
-  padding: '18px 20px',
-  textAlign: 'center',
-  fontWeight: '600'
-};
-
-const tdCenterStyle = {
-  padding: '16px 20px',
-  color: '#444',
-  textAlign: 'center'
-};
-
-const actionControlsStyle = {
-  display: 'grid',
-  gridTemplateColumns: '104px 96px',
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: '10px'
-};
-
-const actionButtonStyle = {
-  width: '104px',
-  padding: '8px 10px',
-  borderRadius: '8px',
-  border: '1px solid #ddd',
-  background: 'white',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '8px',
-  cursor: 'pointer',
-  fontWeight: '500'
-};
-
-const actionSelectStyle = {
-  width: '96px',
-  padding: '8px 10px',
-  borderRadius: '8px',
-  border: '1px solid #ddd',
-  background: 'white'
-};
-
-const actionStatusTextStyle = {
-  width: '96px',
-  color: '#e74c3c',
-  fontWeight: '500',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center'
-};
-
-const modalOverlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  backgroundColor: 'rgba(0,0,0,0.55)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '24px',
-  zIndex: 3000
-};
-
-const modalContentStyle = {
-  width: '100%',
-  maxWidth: '900px',
-  maxHeight: '90vh',
-  overflowY: 'auto',
-  background: 'white',
-  borderRadius: '18px',
-  padding: '32px',
-  boxShadow: '0 20px 60px rgba(0,0,0,0.18)'
-};
-
-const detailGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-  gap: '16px'
-};
-
-const detailCardStyle = {
-  padding: '18px',
-  borderRadius: '14px',
-  background: '#fafafa',
-  border: '1px solid #eee'
-};
-
-const detailLabelStyle = {
-  margin: '0 0 8px',
-  color: '#666',
-  fontSize: '14px',
-  fontWeight: '500'
-};
-
-const detailValueStyle = {
-  margin: 0,
-  color: '#1A1A1B',
-  fontSize: '16px',
-  fontWeight: '600',
-  lineHeight: '1.5'
-};
-
-
-
-export default AdminOrders;
+}
