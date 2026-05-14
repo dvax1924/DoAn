@@ -19,9 +19,15 @@ connectDB();
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  socket.on('join', (userId) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined room`);
+  socket.on('join', (userId, callback) => {
+    const roomId = String(userId);
+    socket.join(roomId);
+    socket.data.userId = roomId;
+    console.log(`User ${roomId} joined room`);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, roomId });
+    }
   });
 
   socket.on('joinAdmin', () => {

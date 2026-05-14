@@ -1,64 +1,116 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../api/axiosInstance';
-import { toast } from 'react-toastify';
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { toast } from '@/components/ui/Toast'
+import api from '../../api/axiosInstance'
+import socket from '../../api/socket'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 
+// ─── Animation variants ──────────────────────────────────────────────────────
+/** @type {import('framer-motion').Variants} */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+  },
+}
+
+/** @type {import('framer-motion').Variants} */
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const OrderUpdate = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams()
+  const navigate = useNavigate()
 
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [order, setOrder] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const [formData, setFormData] = useState({
     phone: '',
     street: '',
     ward: '',
     district: '',
-    province: 'TP. Hồ Chí Minh'
-  });
+    province: 'TP. Hồ Chí Minh',
+  })
 
-  // Lấy thông tin đơn hàng
+  // ── Fetch order ────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await api.get(`/orders/${id}`);
-        const data = res.data.order || res.data;
+        const res = await api.get(`/orders/${id}`)
+        const data = res.data.order || res.data
 
         if (data.orderStatus !== 'pending') {
-          toast.warning("Đơn hàng này không thể chỉnh sửa nữa");
-          navigate('/orders');
-          return;
+          toast.warning('Đơn hàng này không thể chỉnh sửa nữa')
+          navigate('/orders')
+          return
         }
 
-        setOrder(data);
+        setOrder(data)
         setFormData({
           phone: data.shippingAddress.phone || '',
           street: data.shippingAddress.street || '',
           ward: data.shippingAddress.ward || '',
           district: data.shippingAddress.district || '',
-          province: data.shippingAddress.province || 'TP. Hồ Chí Minh'
-        });
-      } catch  {
-        toast.error("Không tìm thấy đơn hàng hoặc không có quyền chỉnh sửa");
-        navigate('/orders');
+          province: data.shippingAddress.province || 'TP. Hồ Chí Minh',
+        })
+      } catch {
+        toast.error('Không tìm thấy đơn hàng hoặc không có quyền chỉnh sửa')
+        navigate('/orders')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchOrder();
-  }, [id, navigate]);
+    fetchOrder()
+  }, [id, navigate])
 
+  // ── Socket: redirect if admin changes order status while customer is editing ─────
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return undefined
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userId = payload.id || payload._id || payload.userId
+      if (!userId) return undefined
+      if (!socket.connected) socket.connect()
+      socket.emit('join', userId)
+
+      const onStatusUpdated = ({ orderId, newStatus }) => {
+        if (orderId !== id) return
+        if (newStatus !== 'pending') {
+          toast.warning('Đơn hàng này vừa được cập nhật và không thể chỉnh sửa nữa')
+          navigate('/orders')
+        }
+      }
+
+      socket.on('orderStatusUpdated', onStatusUpdated)
+      return () => { socket.off('orderStatusUpdated', onStatusUpdated) }
+    } catch {
+      return undefined
+    }
+  }, [id, navigate])
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault()
+    setSaving(true)
 
     try {
       const res = await api.put(`/orders/${id}/status`, {
@@ -68,146 +120,157 @@ const OrderUpdate = () => {
           street: formData.street,
           ward: formData.ward,
           district: formData.district,
-          province: formData.province
-        }
-      });
+          province: formData.province,
+        },
+      })
 
       if (res.data.success) {
-        toast.success("Cập nhật thông tin đơn hàng thành công!");
-        navigate('/orders');           // Quay về trang Orders
+        toast.success('Cập nhật thông tin đơn hàng thành công!')
+        navigate('/orders')
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Cập nhật thất bại");
+      toast.error(error.response?.data?.message || 'Cập nhật thất bại')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
-  if (loading) return <p style={{ textAlign: 'center', padding: '100px' }}>Đang tải...</p>;
-  if (!order) return <p style={{ textAlign: 'center', padding: '100px' }}>Không tìm thấy đơn hàng</p>;
+  // ── Guards ─────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <motion.div
+          className="h-6 w-6 rounded-full border-2 border-foreground/20 border-t-foreground"
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+        />
+      </div>
+    )
+  }
 
+  if (!order) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Không tìm thấy đơn hàng</p>
+      </div>
+    )
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '40px 20px', backgroundColor: '#F5F5F3', minHeight: '80vh' }}>
-      <div className="container" style={{ maxWidth: '700px', margin: '0 auto' }}>
-        
-        <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>
-          Cập nhật thông tin đơn hàng
-        </h1>
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-lg px-6 py-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-8"
+        >
+          {/* Page title */}
+          <motion.div variants={itemVariants} className="space-y-2 text-center">
+            <h1 className="text-3xl font-light tracking-tight text-[#1A1A1B] md:text-4xl">
+              Cập nhật thông tin đơn hàng
+            </h1>
+            <p className="font-mono text-sm text-muted-foreground">
+              #{order._id.slice(-8).toUpperCase()}
+            </p>
+          </motion.div>
 
-        <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
-          
-          <div style={{ marginBottom: '25px' }}>
-            <strong>Mã đơn hàng:</strong> #{order._id.slice(-8).toUpperCase()}
-          </div>
+          {/* Divider */}
+          <motion.div
+            variants={itemVariants}
+            className="mx-auto h-px w-12 bg-foreground/20"
+          />
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '20px' }}>
-              <label>Số điện thoại *</label>
-              <input
-                type="tel"
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <motion.div variants={itemVariants}>
+              <Input
+                label="Số điện thoại"
                 name="phone"
+                type="tel"
                 value={formData.phone}
                 onChange={handleInputChange}
+                placeholder="Nhập số điện thoại"
                 required
-                style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }}
               />
-            </div>
+            </motion.div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label>Địa chỉ chi tiết *</label>
-              <input
-                type="text"
+            <motion.div variants={itemVariants}>
+              <Input
+                label="Địa chỉ chi tiết"
                 name="street"
                 value={formData.street}
                 onChange={handleInputChange}
+                placeholder="Số nhà, tên đường, tòa nhà..."
                 required
-                style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }}
               />
-            </div>
+            </motion.div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-              <div>
-                <label>Phường/Xã *</label>
-                <input
-                  type="text"
-                  name="ward"
-                  value={formData.ward}
-                  onChange={handleInputChange}
-                  required
-                  style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }}
-                />
-              </div>
-              <div>
-                <label>Quận/Huyện *</label>
-                <input
-                  type="text"
-                  name="district"
-                  value={formData.district}
-                  onChange={handleInputChange}
-                  required
-                  style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '8px' }}
-                />
-              </div>
-            </div>
+            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
+              <Input
+                label="Phường/Xã"
+                name="ward"
+                value={formData.ward}
+                onChange={handleInputChange}
+                placeholder="Nhập phường/xã"
+                required
+              />
+              <Input
+                label="Quận/Huyện"
+                name="district"
+                value={formData.district}
+                onChange={handleInputChange}
+                placeholder="Nhập quận/huyện"
+                required
+              />
+            </motion.div>
 
-            <div style={{ marginBottom: '30px' }}>
-              <label>Tỉnh/Thành phố</label>
-              <input
-                type="text"
+            <motion.div variants={itemVariants}>
+              <Input
+                label="Tỉnh/Thành phố"
                 name="province"
                 value={formData.province}
                 onChange={handleInputChange}
                 placeholder="Nhập tỉnh/thành phố"
-                style={{ 
-                  width: '100%', 
-                  padding: '14px', 
-                  borderRadius: '8px', 
-                  border: '1px solid #ddd', 
-                  marginTop: '8px' 
-                }}
               />
-            </div>
+            </motion.div>
 
-            <div style={{ display: 'flex', gap: '15px' }}>
-              <button 
+            {/* Buttons */}
+            <motion.div variants={itemVariants} className="flex flex-col gap-3 pt-6">
+              <Button
                 type="submit"
-                disabled={saving}
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  backgroundColor: '#1A1A1B',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  cursor: saving ? 'not-allowed' : 'pointer'
-                }}
+                variant="primary"
+                size="lg"
+                loading={saving}
+                className="w-full"
               >
-                {saving ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
+                Lưu thay đổi
+              </Button>
 
-              <button 
+              <Button
                 type="button"
+                variant="outline"
+                size="lg"
                 onClick={() => navigate('/orders')}
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  backgroundColor: '#eee',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
+                className="w-full"
               >
                 Quay lại
-              </button>
-            </div>
+              </Button>
+            </motion.div>
           </form>
-        </div>
-      </div>
-    </div>
-  );
-};
 
-export default OrderUpdate;
+          {/* Footer note */}
+          <motion.p
+            variants={itemVariants}
+            className="pt-4 text-center text-xs text-muted-foreground"
+          >
+            Thông tin sẽ được cập nhật cho đơn hàng của bạn
+          </motion.p>
+        </motion.div>
+      </main>
+    </div>
+  )
+}
+
+export default OrderUpdate

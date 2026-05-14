@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const {
+  ACCOUNT_LOCKED_MESSAGE,
+  isAccountLocked
+} = require('../utils/accountStatus');
 
-// Bảo vệ route (phải đăng nhập)
+// Bảo vệ route yêu cầu đăng nhập.
 const protect = async (req, res, next) => {
   let token;
 
@@ -18,22 +22,35 @@ const protect = async (req, res, next) => {
     req.user = await User.findById(decoded.id).select('-password');
 
     if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Người dùng không tồn tại' });
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_LOCKED',
+        message: ACCOUNT_LOCKED_MESSAGE
+      });
     }
+
+    if (isAccountLocked(req.user)) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_LOCKED',
+        message: ACCOUNT_LOCKED_MESSAGE
+      });
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
   }
 };
 
-// Chỉ cho phép Admin
+// Chỉ cho phép Admin.
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Bạn không có quyền truy cập (chỉ dành cho Admin)' 
+    return res.status(403).json({
+      success: false,
+      message: 'Bạn không có quyền truy cập (chỉ dành cho Admin)'
     });
   }
 };
