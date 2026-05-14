@@ -1,8 +1,12 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { emitUserPasswordUpdated } = require('../utils/userRealtime');
+const {
+  ACCOUNT_LOCKED_MESSAGE,
+  isAccountLocked
+} = require('../utils/accountStatus');
 
-// ====================== GENERATE TOKEN (CÓ ROLE) ======================
+// ====================== GENERATE TOKEN ======================
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '30d'
@@ -24,7 +28,7 @@ exports.register = async (req, res) => {
       email,
       password,
       phone,
-      role: 'customer'                    // Mặc định là user
+      role: 'customer'
     });
 
     res.status(201).json({
@@ -33,6 +37,7 @@ exports.register = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      isActive: user.isActive,
       token: generateToken(user._id, user.role)
     });
   } catch (error) {
@@ -47,18 +52,29 @@ exports.login = async (req, res) => {
   try {
     const user = await User.findOne({ email });
 
-    if (user && (await user.comparePassword(password))) {
-      res.json({
-        success: true,
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id, user.role)
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email hoặc mật khẩu không đúng'
       });
-    } else {  
-      res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
     }
+
+    if (isAccountLocked(user)) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_LOCKED',
+        message: ACCOUNT_LOCKED_MESSAGE
+      });
+    }
+
+    res.json({
+      success: true,
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id, user.role)
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -97,6 +113,5 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 module.exports = exports;

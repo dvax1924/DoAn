@@ -1,49 +1,202 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import api from '../../api/axiosInstance';
-import { useCart } from '../../hooks/useCart';
+import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Check,
+  X,
+  AlertTriangle,
+  ShoppingBag,
+  ArrowRight,
+  Receipt,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import api from "../../api/axiosInstance";
+import { useCart } from "../../hooks/useCart";
+import { Button } from "@/components/ui/Button";
 
 const VNPAY_CART_STORAGE_KEY = 'pendingVnpayCart';
 
-const STATUS_META = {
+// --- Animation constants ---
+const EASE = [0.23, 1, 0.32, 1];
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.15 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 18 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: EASE },
+  },
+};
+
+// --- Status configurations ---
+const statusConfig = {
   success: {
-    title: 'Thanh toán thành công',
-    color: '#1f8f5f',
-    badgeBackground: '#e6f7ef',
-    badgeColor: '#1f8f5f',
-    description: 'Giao dịch đã được xác nhận thành công.'
+    icon: Check,
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+    ringColor: "ring-emerald-500/20",
+    accentColor: "#22c55e",
+    title: "Thanh toán thành công",
+    description: "Cảm ơn bạn đã mua sắm tại GOLDIE. Giao dịch đã được xác nhận thành công.",
   },
   failed: {
-    title: 'Thanh toán chưa thành công',
-    color: '#d64545',
-    badgeBackground: '#fdecec',
-    badgeColor: '#d64545',
-    description: 'Giao dịch chưa hoàn tất hoặc đã bị hủy. Giỏ hàng đã được khôi phục để bạn có thể thử lại.'
+    icon: X,
+    iconBg: "bg-red-500/10",
+    iconColor: "text-red-500",
+    ringColor: "ring-red-500/20",
+    accentColor: "#ef4444",
+    title: "Thanh toán chưa thành công",
+    description: "Giao dịch chưa hoàn tất hoặc đã bị hủy. Giỏ hàng đã được khôi phục để bạn có thể thử lại.",
   },
   invalid: {
-    title: 'Không xác minh được giao dịch',
-    color: '#c58512',
-    badgeBackground: '#fff4dc',
-    badgeColor: '#c58512',
-    description: 'Hệ thống chưa xác minh được kết quả từ VNPay. Vui lòng kiểm tra lại trong lịch sử đơn hàng.'
+    icon: AlertTriangle,
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+    ringColor: "ring-amber-500/20",
+    accentColor: "#f59e0b",
+    title: "Không xác minh được giao dịch",
+    description: "Hệ thống chưa xác minh được kết quả từ VNPay. Vui lòng kiểm tra lại trong lịch sử đơn hàng.",
   },
   'not-found': {
-    title: 'Không tìm thấy đơn hàng',
-    color: '#c58512',
-    badgeBackground: '#fff4dc',
-    badgeColor: '#c58512',
-    description: 'Hệ thống không tìm thấy đơn hàng tương ứng với giao dịch này.'
+    icon: AlertTriangle,
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+    ringColor: "ring-amber-500/20",
+    accentColor: "#f59e0b",
+    title: "Không tìm thấy đơn hàng",
+    description: "Hệ thống không tìm thấy đơn hàng tương ứng với giao dịch này.",
   },
   error: {
-    title: 'Có lỗi khi xử lý thanh toán',
-    color: '#c58512',
-    badgeBackground: '#fff4dc',
-    badgeColor: '#c58512',
-    description: 'Đã có lỗi trong quá trình xử lý kết quả thanh toán. Vui lòng kiểm tra lại sau.'
+    icon: AlertTriangle,
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+    ringColor: "ring-amber-500/20",
+    accentColor: "#f59e0b",
+    title: "Có lỗi khi xử lý thanh toán",
+    description: "Đã có lỗi trong quá trình xử lý kết quả thanh toán. Vui lòng kiểm tra lại sau.",
   }
 };
 
-const VnpayReturn = () => {
+// --- Animated checkmark/cross path ---
+function StatusIcon({ status, config }) {
+  const IconComponent = config.icon;
+
+  return (
+    <motion.div
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ delay: 0.2, duration: 0.5, ease: EASE }}
+      className={cn(
+        "relative w-24 h-24 rounded-full flex items-center justify-center",
+        "ring-2",
+        config.iconBg,
+        config.ringColor
+      )}
+    >
+      {/* Animated ring pulse */}
+      <motion.div
+        className={cn("absolute inset-0 rounded-full", config.iconBg)}
+        initial={{ scale: 1, opacity: 0.5 }}
+        animate={{ scale: 1.3, opacity: 0 }}
+        transition={{
+          delay: 0.4,
+          duration: 1,
+          ease: "easeOut",
+        }}
+      />
+
+      {/* Icon with path animation */}
+      {status === "success" ? (
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 40 40"
+          fill="none"
+          aria-hidden="true"
+        >
+          <motion.path
+            d="M10 20l8 8 12-16"
+            stroke={config.accentColor}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ delay: 0.4, duration: 0.6, ease: EASE }}
+          />
+        </svg>
+      ) : status === "failed" ? (
+        <svg
+          width="36"
+          height="36"
+          viewBox="0 0 36 36"
+          fill="none"
+          aria-hidden="true"
+        >
+          <motion.path
+            d="M10 10l16 16M26 10l-16 16"
+            stroke={config.accentColor}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ delay: 0.4, duration: 0.6, ease: EASE }}
+          />
+        </svg>
+      ) : (
+        <motion.div
+          initial={{ rotate: 0 }}
+          animate={{ rotate: [0, 10, -10, 0] }}
+          transition={{ delay: 0.4, duration: 0.5, ease: EASE }}
+        >
+          <IconComponent
+            size={36}
+            strokeWidth={1.5}
+            className={config.iconColor}
+          />
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// --- Order info row ---
+function InfoRow({ label, value, icon, highlight = false }) {
+  const InfoIcon = icon
+
+  if (!value) return null;
+  return (
+    <motion.div
+      variants={itemVariants}
+      className="flex items-center justify-between py-3 border-b border-border last:border-b-0"
+    >
+      <div className="flex items-center gap-2.5 text-muted-foreground">
+        <InfoIcon size={14} strokeWidth={1.5} />
+        <span className="text-xs uppercase tracking-[0.15em]">
+          {label}
+        </span>
+      </div>
+      <span
+        className={cn(
+          "text-sm tracking-wide",
+          highlight ? "text-foreground font-medium" : "text-foreground/70"
+        )}
+      >
+        {value}
+      </span>
+    </motion.div>
+  );
+}
+
+// --- Main component ---
+export default function VnpayReturn() {
   const { cart, clearCart, replaceCart } = useCart();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -52,6 +205,8 @@ const VnpayReturn = () => {
 
   const status = searchParams.get('status') || 'error';
   const orderId = searchParams.get('orderId') || '';
+
+  const config = statusConfig[status] || statusConfig.error;
 
   useEffect(() => {
     if (handledCartStateRef.current) {
@@ -102,121 +257,150 @@ const VnpayReturn = () => {
     fetchOrderAmount();
   }, [orderId]);
 
-  const meta = useMemo(() => STATUS_META[status] || STATUS_META.error, [status]);
+  // Format currency
+  const formatCurrency = (value) => {
+    if (!value || value <= 0) return null;
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(value);
+  };
+
   const orderCode = orderId ? `#${orderId.slice(-8).toUpperCase()}` : null;
-  const formattedAmount = totalAmount > 0 ? `${totalAmount.toLocaleString('vi-VN')}đ` : null;
+  const formattedAmount = formatCurrency(totalAmount);
 
   return (
-    <div style={{ padding: '56px 20px', backgroundColor: '#f3f1ed', minHeight: '80vh' }}>
-      <div className="container" style={{ maxWidth: '760px', margin: '0 auto' }}>
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #f9f6f0 100%)',
-            borderRadius: '20px',
-            padding: '40px 36px',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.08)',
-            border: '1px solid rgba(0,0,0,0.04)',
-            textAlign: 'center'
-          }}
-        >
-          <div
-            style={{
-              width: '82px',
-              height: '82px',
-              margin: '0 auto 22px',
-              borderRadius: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: meta.badgeBackground,
-              color: meta.color,
-              fontSize: '38px',
-              fontWeight: '700'
-            }}
-          >
-            {status === 'success' ? '✓' : '!'}
-          </div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16 relative">
+      {/* Subtle dot-grid texture */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' fill='%231A1A1B'/%3E%3C/svg%3E\")",
+          backgroundSize: "4px 4px",
+        }}
+      />
 
-          <p
-            style={{
-              margin: '0 auto 12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '8px 14px',
-              borderRadius: '999px',
-              backgroundColor: meta.badgeBackground,
-              color: meta.badgeColor,
-              fontWeight: '600',
-              fontSize: '14px'
-            }}
-          >
-            Kết quả giao dịch VNPay
-          </p>
-
-          <h1 style={{ margin: '0 0 12px', fontSize: '36px', color: '#1a1a1b' }}>{meta.title}</h1>
-          <p style={{ margin: '0 0 28px', lineHeight: '1.8', color: '#333' }}>{meta.description}</p>
-
-          {formattedAmount && (
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid #ece7df',
-                borderRadius: '18px',
-                padding: '22px 20px',
-                marginBottom: '24px'
-              }}
-            >
-              <p style={{ margin: '0 0 10px', color: '#7b756d', fontSize: '15px' }}>
-                {status === 'success' ? 'Số tiền đã thanh toán' : 'Giá trị đơn hàng'}
-              </p>
-              <p style={{ margin: 0, fontSize: '34px', fontWeight: '700', color: '#1a1a1b' }}>
-                {formattedAmount}
-              </p>
-              {orderCode && (
-                <p style={{ margin: '10px 0 0', color: '#666' }}>
-                  Mã đơn hàng: <strong>{orderCode}</strong>
-                </p>
-              )}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md relative z-10"
+      >
+        {/* Wordmark */}
+        <motion.div variants={itemVariants} className="text-center mb-10">
+          <div className="inline-flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-px bg-[#C9A96E]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#C9A96E]" />
+              <div className="w-8 h-px bg-[#C9A96E]" />
             </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => navigate('/orders')} style={primaryButtonStyle}>
-              Xem lịch sử đơn hàng
-            </button>
-            <button type="button" onClick={() => navigate('/products')} style={secondaryButtonStyle}>
-              Tiếp tục mua sắm
-            </button>
+            <h1 className="text-[42px] font-light tracking-[0.3em] text-foreground leading-none select-none">
+              GOLDIE
+            </h1>
+            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+              Luxury Fashion
+            </p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+
+        {/* Card */}
+        <motion.div
+          variants={itemVariants}
+          className="bg-card backdrop-blur-sm border border-border rounded-lg px-8 py-10 shadow-lg"
+        >
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col items-center"
+          >
+            {/* Status icon */}
+            <motion.div variants={itemVariants}>
+              <StatusIcon status={status} config={config} />
+            </motion.div>
+
+            {/* Status text */}
+            <motion.div variants={itemVariants} className="text-center mt-6 mb-8">
+              <h2 className="text-2xl font-medium text-foreground tracking-wide">
+                {config.title}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-2 tracking-wide leading-relaxed max-w-xs mx-auto">
+                {config.description}
+              </p>
+            </motion.div>
+
+            {/* Order details */}
+            {(orderCode || formattedAmount) && (
+              <motion.div
+                variants={itemVariants}
+                className="w-full bg-muted/30 rounded-lg px-5 py-4 mb-8"
+              >
+                <motion.div variants={containerVariants} initial="hidden" animate="visible">
+                  <InfoRow
+                    label="Mã đơn hàng"
+                    value={orderCode}
+                    icon={Receipt}
+                    highlight
+                  />
+                  <InfoRow
+                    label="Số tiền"
+                    value={formattedAmount}
+                    icon={ShoppingBag}
+                    highlight
+                  />
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Action buttons */}
+            <motion.div
+              variants={itemVariants}
+              className="w-full flex flex-col gap-3"
+            >
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => navigate('/orders')}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                Xem lịch sử đơn hàng <ArrowRight size={16} />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => navigate('/products')}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <ShoppingBag size={16} /> Tiếp tục mua sắm
+              </Button>
+
+              {/* Retry button for failed status */}
+              {status === "failed" && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/checkout')}
+                  className="mt-1 text-sm text-muted-foreground hover:text-foreground tracking-wide underline underline-offset-4 cursor-pointer transition-colors"
+                >
+                  Thử lại thanh toán
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+
+
+        {/* Footer brand note */}
+        <motion.p
+          variants={itemVariants}
+          className="text-center text-[10px] uppercase tracking-[0.25em] text-muted-foreground mt-8"
+        >
+          &copy; {new Date().getFullYear()} Goldie. All rights reserved.
+        </motion.p>
+      </motion.div>
     </div>
   );
-};
-
-const baseButtonStyle = {
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '16px'
-};
-
-const primaryButtonStyle = {
-  ...baseButtonStyle,
-  padding: '14px 22px',
-  backgroundColor: '#1A1A1B',
-  color: 'white',
-  borderRadius: '10px',
-  fontWeight: '600'
-};
-
-const secondaryButtonStyle = {
-  ...baseButtonStyle,
-  padding: '14px 22px',
-  backgroundColor: '#f0ebe3',
-  color: '#1A1A1B',
-  borderRadius: '10px',
-  fontWeight: '600'
-};
-
-export default VnpayReturn;
+}

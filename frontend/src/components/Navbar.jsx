@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+﻿import { Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -13,7 +13,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
 import api from '../api/axiosInstance'
 import socket from '../api/socket'
-import { toast } from 'react-toastify'
+import { toast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 
 /**
@@ -142,13 +142,14 @@ const Navbar = () => {
     setSearchTerm('')
   }
 
+  /** @type {import('framer-motion').Variants} */
   const dropdownVariants = {
     hidden: { opacity: 0, y: -8, scale: 0.96 },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
+      transition: { duration: 0.2, ease: 'easeOut' },
     },
     exit: {
       opacity: 0,
@@ -158,18 +159,20 @@ const Navbar = () => {
     },
   }
 
+  /** @type {import('framer-motion').Variants} */
   const overlayVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { duration: 0.3 } },
     exit: { opacity: 0, transition: { duration: 0.2 } },
   }
 
+  /** @type {import('framer-motion').Variants} */
   const searchContentVariants = {
     hidden: { opacity: 0, y: -20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.4, delay: 0.1, ease: [0.23, 1, 0.32, 1] },
+      transition: { duration: 0.4, delay: 0.1, ease: 'easeOut' },
     },
     exit: {
       opacity: 0,
@@ -178,18 +181,20 @@ const Navbar = () => {
     },
   }
 
+  /** @type {import('framer-motion').Variants} */
   const mobileMenuVariants = {
     hidden: { x: '100%' },
     visible: {
       x: 0,
-      transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] },
+      transition: { duration: 0.4, ease: 'easeOut' },
     },
     exit: {
       x: '100%',
-      transition: { duration: 0.3, ease: [0.23, 1, 0.32, 1] },
+      transition: { duration: 0.3, ease: 'easeInOut' },
     },
   }
 
+  /** @type {import('framer-motion').Variants} */
   const staggerContainer = {
     hidden: { opacity: 0 },
     visible: {
@@ -198,6 +203,7 @@ const Navbar = () => {
     },
   }
 
+  /** @type {import('framer-motion').Variants} */
   const staggerItem = {
     hidden: { opacity: 0, y: 10 },
     visible: {
@@ -225,7 +231,7 @@ const Navbar = () => {
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
         className={cn(
           'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
           scrolled

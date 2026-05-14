@@ -32,6 +32,14 @@
     @apply bg-background text-accent font-sans antialiased;
     line-height: 1.6;
   }
+  
+  /* Remove focus outline from Recharts */
+  .recharts-wrapper,
+  .recharts-wrapper:focus,
+  .recharts-surface,
+  .recharts-surface:focus {
+    outline: none !important;
+  }
 }
 
 @layer components {

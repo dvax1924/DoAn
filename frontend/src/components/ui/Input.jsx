@@ -30,6 +30,17 @@ export function Label({
   );
 }
 
+/**
+ * @typedef {Object} InputCustomProps
+ * @property {string} [label]
+ * @property {string} [error]
+ * @property {string} [hint]
+ * @property {'sm'|'md'|'lg'} [size]
+ */
+
+/**
+ * @param {Omit<import('react').InputHTMLAttributes<HTMLInputElement>, 'size'> & import('framer-motion').MotionProps & InputCustomProps} props
+ */
 export function Input({
   label,
   error,
@@ -180,4 +191,35 @@ export function Textarea({
   );
 }
 
+/**
+ * PasswordInput — wraps shared Input with a right-side element slot.
+ *
+ * Use this for password fields that need an eye-toggle button.
+ *
+ * @example
+ * <PasswordInput
+ *   label="Mật khẩu mới"
+ *   type={show ? 'text' : 'password'}
+ *   value={value}
+ *   onChange={onChange}
+ *   rightElement={<EyeToggleButton />}
+ *   error={errors.password}
+ * />
+ *
+ * @param {Omit<import('react').InputHTMLAttributes<HTMLInputElement>, 'size'> & import('framer-motion').MotionProps & InputCustomProps & { rightElement?: import('react').ReactNode }} props
+ */
+export function PasswordInput({ rightElement, className, ...props }) {
+  return (
+    <div className="relative w-full">
+      <Input {...props} className={cn(rightElement && 'pr-12', className)} />
+      {rightElement && (
+        <span className="absolute right-4 top-[38px]">
+          {rightElement}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default Input
+

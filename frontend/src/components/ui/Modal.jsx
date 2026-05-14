@@ -16,6 +16,9 @@ const sizes = {
   full: 'max-w-4xl',
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ isOpen: boolean, onClose: () => void, size?: 'sm'|'md'|'lg'|'xl'|'full' }>} props
+ */
 export function Modal({ isOpen, onClose, children, size = 'md' }) {
   return (
     <Dialog
@@ -49,6 +52,9 @@ export function Modal({ isOpen, onClose, children, size = 'md' }) {
   )
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ onClose?: () => void, className?: string }>} props
+ */
 export function ModalHeader({ children, onClose, className }) {
   return (
     <div
@@ -80,6 +86,9 @@ export function ModalHeader({ children, onClose, className }) {
   )
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ className?: string }>} props
+ */
 export function ModalTitle({ children, className }) {
   return (
     <DialogTitle
@@ -93,6 +102,9 @@ export function ModalTitle({ children, className }) {
   )
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ className?: string }>} props
+ */
 export function ModalDescription({ children, className }) {
   return (
     <p className={cn('mt-1 text-sm text-muted-foreground', className)}>
@@ -101,10 +113,16 @@ export function ModalDescription({ children, className }) {
   )
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ className?: string }>} props
+ */
 export function ModalContent({ children, className }) {
   return <div className={cn('px-6 py-4', className)}>{children}</div>
 }
 
+/**
+ * @param {import('react').PropsWithChildren<{ className?: string }>} props
+ */
 export function ModalFooter({ children, className }) {
   return (
     <div
