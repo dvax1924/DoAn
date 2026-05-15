@@ -10,6 +10,7 @@ const {
   buildVnpayPaymentUrl,
   getVnpayConfig
 } = require('../utils/vnpay');
+const { getVietnamDayRange } = require('../utils/vietnamTime');
 
 function emitNewOrderCreated(order) {
   try {
@@ -205,6 +206,13 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    if (!isAdmin && orderStatus && orderStatus !== 'cancelled') {
+      return res.status(403).json({
+        success: false,
+        message: 'Khach hang khong co quyen xac nhan don hang'
+      });
+    }
+
     if (!isAdmin && orderStatus === 'cancelled' && order.paymentStatus === 'paid') {
       return res.status(400).json({
         success: false,
@@ -220,7 +228,12 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     if (orderStatus) {
+      const previousOrderStatus = order.orderStatus;
       order.orderStatus = orderStatus;
+
+      if (orderStatus === 'confirmed' && (previousOrderStatus !== 'confirmed' || !order.confirmedAt)) {
+        order.confirmedAt = new Date();
+      }
 
       if (orderStatus === 'cancelled' && order.paymentStatus !== 'paid') {
         await releaseOrderInventory(order);
@@ -239,10 +252,14 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (orderStatus) {
       const userId = order.user.toString();
-      io.to(userId).emit('orderStatusUpdated', {
+      const payload = {
         orderId: order._id,
-        newStatus: orderStatus
-      });
+        newStatus: orderStatus,
+        confirmedAt: order.confirmedAt
+      };
+
+      io.to(userId).emit('orderStatusUpdated', payload);
+      io.to('admins').emit('orderStatusUpdated', payload);
     }
 
     res.json({
@@ -257,16 +274,23 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.getOrdersToday = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const { start, end, dateKey } = getVietnamDayRange();
 
     const orders = await Order.find({
-      createdAt: { $gte: today, $lt: tomorrow }
+      orderStatus: 'confirmed',
+      $or: [
+        { confirmedAt: { $gte: start, $lt: end } },
+        {
+          confirmedAt: { $exists: false },
+          createdAt: { $gte: start, $lt: end }
+        },
+        {
+          confirmedAt: null,
+          createdAt: { $gte: start, $lt: end }
+        }
+      ]
     })
-      .sort({ createdAt: -1 })
+      .sort({ confirmedAt: -1, createdAt: -1 })
       .populate('user', 'name email phone')
       .populate('items.product', 'name images');
 
@@ -275,7 +299,7 @@ exports.getOrdersToday = async (req, res) => {
 
     res.json({
       success: true,
-      date: today.toISOString().split('T')[0],
+      date: dateKey,
       totalOrders,
       totalRevenue,
       orders

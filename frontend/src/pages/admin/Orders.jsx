@@ -351,18 +351,19 @@ export default function AdminOrders() {
     setIsUpdating(true);
     
     try {
-      await api.put(`/orders/${selectedOrder._id}/status`, { orderStatus: nextStatus });
+      const res = await api.put(`/orders/${selectedOrder._id}/status`, { orderStatus: nextStatus });
+      const updatedOrder = res.data.order || {};
       toast.success("Cập nhật trạng thái thành công");
       
       setOrders((prev) =>
         prev.map((order) =>
           order._id === selectedOrder._id
-            ? { ...order, orderStatus: nextStatus }
+            ? { ...order, ...updatedOrder, orderStatus: nextStatus }
             : order
         )
       );
 
-      setSelectedOrder((prev) => prev ? { ...prev, orderStatus: nextStatus } : null);
+      setSelectedOrder((prev) => prev ? { ...prev, ...updatedOrder, orderStatus: nextStatus } : null);
     } catch {
       toast.error("Không thể cập nhật trạng thái");
     } finally {

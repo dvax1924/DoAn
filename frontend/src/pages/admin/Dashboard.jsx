@@ -197,10 +197,12 @@ const AdminDashboard = () => {
 
     socket.on('newOrderCreated', onOrderEvent)
     socket.on('orderPaymentUpdated', onOrderEvent)
+    socket.on('orderStatusUpdated', onOrderEvent)
 
     return () => {
       socket.off('newOrderCreated', onOrderEvent)
       socket.off('orderPaymentUpdated', onOrderEvent)
+      socket.off('orderStatusUpdated', onOrderEvent)
     }
   }, [fetchDashboard, selectedPeriod])
 
