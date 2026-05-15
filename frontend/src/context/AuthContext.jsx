@@ -73,6 +73,23 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   }, [clearLockedMessage]);
 
+  // Redirect theo role khi app khởi động (refresh, mở tab mới)
+  // Chỉ chạy sau khi loading xong và user đã xác thực
+  useEffect(() => {
+    if (loading || !user) return;
+
+    const path = window.location.pathname;
+    const isAdminPath = path.startsWith('/admin');
+    const isAuthPath = path === '/login' || path === '/register';
+
+    if (user.role === 'admin' && !isAdminPath && !isAuthPath) {
+      // Admin đang ở trang customer → redirect về /admin
+      navigate('/admin', { replace: true });
+    }
+    // Customer ở trang admin được xử lý bởi AdminRoute trong AppRouter
+  }, [loading, user, navigate]);
+
+
   const updateUser = useCallback((nextUser) => {
     setUser((prevUser) => {
       if (!prevUser) {
