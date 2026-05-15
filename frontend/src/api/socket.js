@@ -3,7 +3,8 @@ import { SOCKET_BASE_URL } from './apiBaseUrl';
 
 const socket = io(SOCKET_BASE_URL, {
   autoConnect: false,
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
+  upgrade: true,
 });
 
 export default socket;
