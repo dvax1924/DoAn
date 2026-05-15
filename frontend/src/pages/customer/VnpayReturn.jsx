@@ -52,7 +52,7 @@ const statusConfig = {
     iconColor: "text-red-500",
     ringColor: "ring-red-500/20",
     accentColor: "#ef4444",
-    title: "Thanh toán chưa thành công",
+    title: "Thanh toán không thành công",
     description: "Giao dịch chưa hoàn tất hoặc đã bị hủy. Giỏ hàng đã được khôi phục để bạn có thể thử lại.",
   },
   invalid: {
@@ -377,16 +377,6 @@ export default function VnpayReturn() {
                 <ShoppingBag size={16} /> Tiếp tục mua sắm
               </Button>
 
-              {/* Retry button for failed status */}
-              {status === "failed" && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/checkout')}
-                  className="mt-1 text-sm text-muted-foreground hover:text-foreground tracking-wide underline underline-offset-4 cursor-pointer transition-colors"
-                >
-                  Thử lại thanh toán
-                </button>
-              )}
             </motion.div>
           </motion.div>
         </motion.div>
