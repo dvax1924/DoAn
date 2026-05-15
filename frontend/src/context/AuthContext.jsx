@@ -143,11 +143,29 @@ export const AuthProvider = ({ children }) => {
     socket.on('userPasswordUpdated', handleUserPasswordUpdated);
     socket.on('accountLocked', handleAccountLocked);
 
+    // Fallback polling: kiểm tra trạng thái tài khoản mỗi 30s
+    // phòng trường hợp Socket.IO không hoạt động (Render free tier)
+    const pollInterval = setInterval(async () => {
+      if (socket.connected) return;
+      try {
+        const res = await api.get('/users/profile');
+        const profile = res.data.user || res.data;
+        if (profile?.isActive === false) {
+          forceLogoutForLockedAccount();
+        }
+      } catch (err) {
+        if (err.response?.data?.code === 'ACCOUNT_LOCKED') {
+          forceLogoutForLockedAccount(err.response.data.message);
+        }
+      }
+    }, 30_000);
+
     return () => {
       socket.off('connect', joinUserRooms);
       socket.off('userProfileUpdated', handleUserProfileUpdated);
       socket.off('userPasswordUpdated', handleUserPasswordUpdated);
       socket.off('accountLocked', handleAccountLocked);
+      clearInterval(pollInterval);
     };
   }, [logout, navigate, saveLockedMessage, updateUser, user?._id, user?.role]);
 
