@@ -166,7 +166,7 @@ const Home = () => {
             animate="visible"
             className="mt-5 mb-14 max-w-md text-balance font-serif text-[clamp(1rem,2vw,1.25rem)] italic tracking-[0.06em] text-white/65"
           >
-            Where elegance meets intention
+            Come Discover Us And Fuck The Pain Away!
           </motion.p>
 
           <motion.div
@@ -243,9 +243,7 @@ const Home = () => {
             viewport={{ once: true }}
             className="mx-auto max-w-3xl text-center"
           >
-            <p className="mb-5 text-xs uppercase tracking-[0.4em] text-[#1A1A1B]/45">
-              Featured
-            </p>
+
             <h2 className="text-3xl font-light tracking-tight text-[#1A1A1B] md:text-4xl">
               New Arrivals
             </h2>

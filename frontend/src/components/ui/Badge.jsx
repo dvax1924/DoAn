@@ -17,21 +17,7 @@ const sizes = {
   lg: 'px-3 py-1.5 text-sm',
 }
 
-/**
- * Badge — small status indicator with optional icon.
- *
- * @example
- * // Simple text badge
- * <Badge color="emerald">Đã xác nhận</Badge>
- *
- * // With icon
- * <Badge color="amber" icon={Clock}>Đang chờ</Badge>
- *
- * // Custom className override
- * <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200">
- *   Custom
- * </Badge>
- */
+
 export function Badge({
   children,
   color = 'default',

@@ -21,11 +21,12 @@ import { cn } from '@/lib/utils'
  * Collection chỉ render từ state `categories` (API GET /categories + socket categoryUpdated).
  */
 const POPULAR_SEARCH_TERMS = [
-  'Dresses',
-  'Handbags',
-  'Jewelry',
-  'Sale',
-  'Outer',
+  'Shirt',
+  'T-Shirt',
+  'Pants',
+  'Jacket',
+  'Bomber',
+  'Knit',
 ]
 
 const Navbar = () => {
@@ -55,9 +56,13 @@ const Navbar = () => {
     } catch (error) {
       console.error('Lỗi tải danh mục:', error)
       setCategories([
-        { name: 'All', slug: 'all' },
-        { name: 'T-shirt', slug: 't-shirt' },
-        { name: 'Outer', slug: 'outer' },
+        { _id: 'all', name: 'All', slug: 'all' },
+        { _id: 't-shirt', name: 'T-Shirt', slug: 't-shirt' },
+        { _id: 'shirt', name: 'Shirt', slug: 'shirt' },
+        { _id: 'bottoms', name: 'Bottoms', slug: 'bottoms' },
+        { _id: 'sweatshirt-hoodie', name: 'Sweatshirt & Hoodie', slug: 'sweatshirt-hoodie' },
+        { _id: 'outer', name: 'Outer', slug: 'outer' },
+        { _id: 'knitwear', name: 'Knitwear', slug: 'knitwear' },
       ])
     } finally {
       setLoadingCategories(false)
@@ -287,7 +292,7 @@ const Navbar = () => {
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className="absolute top-full left-0 mt-4 w-56 bg-[#1A1A1B] border border-white/10 shadow-2xl max-h-[min(420px,70vh)] overflow-y-auto"
+                      className="absolute top-full left-0 mt-4 w-56 min-h-[220px] max-h-[min(420px,70vh)] overflow-y-auto bg-[#1A1A1B] border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-transparent"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <motion.ul

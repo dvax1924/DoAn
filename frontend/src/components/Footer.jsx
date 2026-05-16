@@ -102,8 +102,8 @@ const Footer = () => {
                 GOLDIE
               </p>
               <p className="mx-auto max-w-md text-base leading-relaxed text-white/45 text-center md:mx-0 md:max-w-sm md:text-sm md:text-left">
-                Discover timeless elegance and luxury craftsmanship. Each
-                collection reflects a refined, modern point of view.
+                GOLDIE creates a new aesthetic by accessing technical fabrics, durable materials, experimental knitting techniques, and chemical dyeing treatments. 
+                From our perspective, urban streetwear is now renewed by deconstruction through raw cuts, hand distressing, combining innovative garments and asymmetrical details.
               </p>
             </motion.div>
 
