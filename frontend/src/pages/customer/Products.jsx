@@ -339,10 +339,10 @@ const Products = () => {
           <ProductGridSkeleton
             count={8}
             className={cn(
-              'gap-6 md:gap-8',
+              'gap-3 sm:gap-6 md:gap-8',
               gridCols === 3
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3'
+                : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             )}
           />
         )}
@@ -361,10 +361,10 @@ const Products = () => {
           <>
             <motion.div
               className={cn(
-                'grid gap-6 md:gap-8',
+                'grid gap-3 sm:gap-6 md:gap-8',
                 gridCols === 3
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3'
+                  : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
               )}
               variants={containerVariants}
               initial="hidden"

@@ -258,7 +258,7 @@ const Home = () => {
           {loadingFeatured ? (
             <ProductGridSkeleton
               count={4}
-              className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-7"
+              className="grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-8 md:gap-7"
             />
           ) : (
             <motion.div
@@ -266,7 +266,7 @@ const Home = () => {
               variants={featuredContainerVariants}
               initial="hidden"
               animate="show"
-              className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-7 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-8 md:gap-7 lg:grid-cols-4"
             >
               {featuredProducts.map((product) => (
                 <motion.div
