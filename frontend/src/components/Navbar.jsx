@@ -292,7 +292,7 @@ const Navbar = () => {
                       initial="hidden"
                       animate="visible"
                       exit="exit"
-                      className="absolute top-full left-0 mt-4 w-56 min-h-[220px] max-h-[min(420px,70vh)] overflow-y-auto bg-[#1A1A1B] border border-white/10 shadow-2xl scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent scroll-smooth"
+                      className="absolute top-full left-0 mt-4 w-56 min-h-[220px] max-h-[min(420px,70vh)] overflow-y-auto bg-[#1A1A1B] border border-white/10 shadow-2xl scroll-smooth collection-scrollbar-hidden"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <motion.ul
