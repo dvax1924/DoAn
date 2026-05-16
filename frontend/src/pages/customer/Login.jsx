@@ -150,7 +150,7 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16 relative">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-10 sm:py-16 relative">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 opacity-[0.015]"
@@ -193,7 +193,7 @@ export default function Login() {
 
         <motion.div
           variants={itemVariants}
-          className="bg-card backdrop-blur-sm border border-border rounded-lg px-8 py-9 shadow-lg"
+          className="bg-card backdrop-blur-sm border border-border rounded-lg px-5 py-7 sm:px-8 sm:py-9 shadow-lg"
         >
           <motion.div variants={containerVariants} initial="hidden" animate="visible">
             <motion.div variants={itemVariants} className="mb-7">

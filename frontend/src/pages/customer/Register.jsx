@@ -186,7 +186,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-16 relative">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-10 sm:py-16 relative">
       {/* Subtle texture overlay */}
       <div
         aria-hidden="true"
@@ -233,7 +233,7 @@ export default function Register() {
         {/* Card */}
         <motion.div
           variants={itemVariants}
-          className="bg-card backdrop-blur-sm border border-border rounded-lg px-8 py-9 shadow-lg"
+          className="bg-card backdrop-blur-sm border border-border rounded-lg px-5 py-7 sm:px-8 sm:py-9 shadow-lg"
         >
           <AnimatePresence mode="wait">
             {success ? (

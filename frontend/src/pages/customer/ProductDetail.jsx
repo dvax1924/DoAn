@@ -369,7 +369,7 @@ const ProductDetail = () => {
             </div>
 
             {images.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto pb-1">
+              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1">
                 {images.map((img, index) => {
                   const thumbUrl = getImageUrl(img)
                   return (
@@ -378,7 +378,7 @@ const ProductDetail = () => {
                       type="button"
                       onClick={() => setMainImage(img)}
                       className={cn(
-                        'relative aspect-square w-20 shrink-0 overflow-hidden rounded-md bg-muted transition-all duration-300',
+                        'relative aspect-square w-16 sm:w-20 shrink-0 overflow-hidden rounded-md bg-muted transition-all duration-300',
                         mainImage === img
                           ? 'opacity-100 shadow-md'
                           : 'opacity-60 hover:opacity-100'
@@ -581,19 +581,19 @@ const ProductDetail = () => {
               {product.description || '—'}
             </p>
 
-            <div className="mb-8 grid grid-cols-3 gap-4 border-y border-accent/10 py-6">
-              <div className="flex flex-col items-center gap-2 text-center">
+            <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4 border-y border-accent/10 py-6">
+              <div className="flex sm:flex-col items-center gap-3 sm:gap-2 text-left sm:text-center">
                 <Truck className="h-5 w-5 text-accent/70" />
                 <span className="text-xs text-accent/70">
                   Miễn phí vận chuyển
                 </span>
               </div>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <RotateCcw className="h-5 w-5 text-accent/70" />
+              <div className="flex sm:flex-col items-center gap-3 sm:gap-2 text-left sm:text-center">
+                <RotateCcw className="h-5 w-5 shrink-0 text-accent/70" />
                 <span className="text-xs text-accent/70">Đổi trả 30 ngày</span>
               </div>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <Shield className="h-5 w-5 text-accent/70" />
+              <div className="flex sm:flex-col items-center gap-3 sm:gap-2 text-left sm:text-center">
+                <Shield className="h-5 w-5 shrink-0 text-accent/70" />
                 <span className="text-xs text-accent/70">
                   Bảo hành chính hãng
                 </span>
