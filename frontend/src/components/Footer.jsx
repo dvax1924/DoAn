@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { createLucideIcon } from 'lucide-react'
+import { createLucideIcon, MapPin, Phone, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -102,8 +102,7 @@ const Footer = () => {
                 GOLDIE
               </p>
               <p className="mx-auto max-w-md text-base leading-relaxed text-white/45 text-center md:mx-0 md:max-w-sm md:text-sm md:text-left">
-                GOLDIE creates a new aesthetic by accessing technical fabrics, durable materials, experimental knitting techniques, and chemical dyeing treatments. 
-                From our perspective, urban streetwear is now renewed by deconstruction through raw cuts, hand distressing, combining innovative garments and asymmetrical details.
+                  GOLDIE forges a raw new aesthetic with technical fabrics, experimental knitting, and chemical dyes. Urban streetwear is reborn through deconstructed cuts, hand distressing, and bold asymmetrical details.
               </p>
             </motion.div>
 
@@ -170,6 +169,20 @@ const Footer = () => {
                     </motion.a>
                   )
                 })}
+              </div>
+              <div className="mx-auto flex w-full max-w-[260px] flex-col gap-3 text-left md:mx-0 md:items-end md:text-right">
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <MapPin size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>360 Phố Huế, Hà Nội</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <Phone size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>0985 032 589</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <Mail size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>info@goldievietnam.com</span>
+                </div>
               </div>
               <p className="text-xs uppercase tracking-[0.18em] text-white/35">
                 {hoveredIcon === null
