@@ -364,8 +364,10 @@ export default function AdminOrders() {
       );
 
       setSelectedOrder((prev) => prev ? { ...prev, ...updatedOrder, orderStatus: nextStatus } : null);
-    } catch {
-      toast.error("Không thể cập nhật trạng thái");
+    } catch (err) {
+      // Hiển thị message lỗi từ server (vd: VNPAY chưa thanh toán)
+      const serverMsg = err?.response?.data?.message;
+      toast.error(serverMsg || "Không thể cập nhật trạng thái");
     } finally {
       setIsUpdating(false);
     }
@@ -1058,7 +1060,7 @@ export default function AdminOrders() {
                       );
                     })()}
                   </div>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     {selectedOrder.orderStatus === 'pending' && (
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -1070,24 +1072,61 @@ export default function AdminOrders() {
                         Hủy đơn
                       </motion.button>
                     )}
-                    {selectedOrder.orderStatus === 'pending' && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleUpdateStatus('confirmed')}
-                        disabled={isUpdating}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#1A1A1B] px-4 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isUpdating ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
-                        ) : (
-                          <CheckCircle className="h-4 w-4" strokeWidth={2} />
-                        )}
-                        Xác nhận
-                      </motion.button>
-                    )}
+                    {selectedOrder.orderStatus === 'pending' && (() => {
+                      // Đơn VNPAY chưa thanh toán: disable nút và hiển thị tooltip warning
+                      const isVnpayUnpaid =
+                        selectedOrder.paymentMethod === 'VNPAY' &&
+                        selectedOrder.paymentStatus !== 'paid';
+
+                      return (
+                        <div className="relative group">
+                          <motion.button
+                            whileHover={!isVnpayUnpaid ? { scale: 1.02 } : {}}
+                            whileTap={!isVnpayUnpaid ? { scale: 0.98 } : {}}
+                            onClick={() => !isVnpayUnpaid && handleUpdateStatus('confirmed')}
+                            disabled={isUpdating || isVnpayUnpaid}
+                            className={cn(
+                              "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all",
+                              isVnpayUnpaid
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-[#1A1A1B] text-white hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                            )}
+                          >
+                            {isUpdating ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" strokeWidth={2} />
+                            )}
+                            Xác nhận
+                          </motion.button>
+                          {/* Tooltip chỉ hiển thị khi VNPay chưa thanh toán */}
+                          {isVnpayUnpaid && (
+                            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10 w-64">
+                              <div className="rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg">
+                                Không thể xác nhận vì thanh toán VNPay chưa thành công
+                                <div className="absolute -bottom-1 right-6 h-2 w-2 rotate-45 bg-gray-900" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
+
+                {/* Warning banner khi đơn VNPAY chưa được thanh toán */}
+                {selectedOrder.orderStatus === 'pending' &&
+                  selectedOrder.paymentMethod === 'VNPAY' &&
+                  selectedOrder.paymentStatus !== 'paid' && (
+                    <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" strokeWidth={2} />
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        <span className="font-semibold">VNPay chưa thanh toán</span> — Đơn hàng này chỉ có thể xác nhận sau khi khách hàng hoàn tất thanh toán qua VNPay.
+                        Trạng thái hiện tại:{' '}
+                        <span className="font-medium">{formatPaymentStatusText(selectedOrder.paymentStatus)}</span>.
+                      </p>
+                    </div>
+                )}
 
                 {/* Status Progress */}
                 {selectedOrder.orderStatus !== 'cancelled' && (
