@@ -150,10 +150,10 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-10 sm:py-16 relative">
+    <div className="min-h-[100dvh] bg-background flex flex-col px-4 py-10 pb-safe sm:py-16 relative overflow-y-auto">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 opacity-[0.015]"
+        className="pointer-events-none absolute inset-0 opacity-[0.015]"
         style={{
           backgroundImage:
             "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' fill='%231A1A1B'/%3E%3C/svg%3E\")",
@@ -173,7 +173,7 @@ export default function Login() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="w-full max-w-sm"
+        className="w-full max-w-sm m-auto z-10"
       >
         <motion.div variants={itemVariants} className="text-center mb-10">
           <div className="inline-flex flex-col items-center gap-3">

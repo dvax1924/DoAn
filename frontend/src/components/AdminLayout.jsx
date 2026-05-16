@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -180,9 +180,9 @@ const AdminLayout = ({ children }) => {
   )
 
   return (
-    <div className="min-h-screen bg-[#F5F5F3]">
+    <div className="min-h-[100dvh] bg-[#F5F5F3]">
       <motion.aside
-        className="fixed left-0 top-0 z-40 hidden h-screen w-[280px] flex-col bg-[#1A1A1B] lg:flex"
+        className="fixed left-0 top-0 z-40 hidden h-[100dvh] w-[280px] flex-col bg-[#1A1A1B] lg:flex"
         variants={sidebarVariants}
         initial="hidden"
         animate="visible"
@@ -224,7 +224,7 @@ const AdminLayout = ({ children }) => {
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.aside
-              className="fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col bg-[#1A1A1B] lg:hidden"
+              className="fixed left-0 top-0 z-50 flex h-[100dvh] w-[280px] flex-col bg-[#1A1A1B] lg:hidden"
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
@@ -236,7 +236,7 @@ const AdminLayout = ({ children }) => {
         )}
       </AnimatePresence>
 
-      <main className="min-h-screen pt-16 lg:ml-[280px] lg:pt-0">
+      <main className="min-h-[100dvh] pt-16 pb-safe lg:ml-[280px] lg:pt-0">
         <div className="px-6 py-8 lg:px-[50px] lg:py-10">{children}</div>
       </main>
 

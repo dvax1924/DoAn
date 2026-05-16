@@ -28,9 +28,12 @@
 }
 
 @layer base {
-  body {
+  html, body {
     @apply bg-background text-accent font-sans antialiased;
+    min-height: 100dvh;
+    width: 100%;
     line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
   }
   
   /* Remove focus outline from Recharts */
