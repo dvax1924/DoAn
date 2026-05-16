@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -56,10 +56,10 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
         scale: isRemoving ? 0.95 : 1,
       }}
       exit={{ opacity: 0, x: -100, transition: { duration: 0.3 } }}
-      className="flex gap-6 border-b border-accent/10 py-8"
+      className="flex gap-3 sm:gap-6 border-b border-accent/10 py-6 sm:py-8"
     >
       <motion.div
-        className="relative h-36 w-28 shrink-0 overflow-hidden bg-muted md:h-40 md:w-32"
+        className="relative h-28 w-20 sm:h-36 sm:w-28 shrink-0 overflow-hidden bg-muted"
         whileHover={{ scale: 1.02 }}
       >
         <img
@@ -72,7 +72,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
           <Link to={`/products/${item.product}`}>
-            <h3 className="line-clamp-2 text-base font-medium text-accent transition-all hover:underline md:text-lg underline-offset-4">
+            <h3 className="line-clamp-2 text-sm sm:text-base font-medium text-accent transition-all hover:underline md:text-lg underline-offset-4">
               {item.name}
             </h3>
           </Link>
@@ -226,7 +226,7 @@ function OrderSummary({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="border border-accent/10 bg-card p-8"
+      className="border border-accent/10 bg-card p-5 sm:p-8"
     >
       <h2 className="mb-6 text-lg font-medium tracking-tight text-accent">
         Tóm tắt đơn hàng
@@ -386,7 +386,7 @@ const Cart = () => {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8 md:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 lg:px-8 md:py-16">
           <EmptyCart />
         </div>
       </div>
