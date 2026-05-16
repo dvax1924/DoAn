@@ -184,11 +184,6 @@ const Footer = () => {
                   <span>info@goldievietnam.com</span>
                 </div>
               </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                {hoveredIcon === null
-                  ? 'Follow us on social media'
-                  : socialLinks[hoveredIcon].name}
-              </p>
             </motion.div>
           </motion.div>
         </div>

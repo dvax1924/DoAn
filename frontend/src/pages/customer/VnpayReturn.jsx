@@ -361,8 +361,7 @@ export default function VnpayReturn() {
               GOLDIE
             </h1>
             <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
-              Luxury Fashion
-            </p>
+              IMPERFECTION            </p>
           </div>
         </motion.div>
 
