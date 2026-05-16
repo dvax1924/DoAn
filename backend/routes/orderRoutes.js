@@ -1,20 +1,24 @@
 const express = require('express');
 const router = express.Router();
 
-const { 
-  createOrder, 
-  getMyOrders, 
-  getOrderById, 
-  getAllOrders, 
+const {
+  createOrder,
+  getMyOrders,
+  getOrderById,
+  getAllOrders,
   updateOrderStatus,
-  getOrdersToday 
+  getOrdersToday
 } = require('../controllers/orderController');
+
+const { retryVnpayPayment } = require('../controllers/paymentController');
 
 const { protect, admin } = require('../middleware/auth');
 
 // ==================== CUSTOMER ROUTES ====================
 router.post('/', protect, createOrder);
 router.get('/my-orders', protect, getMyOrders);
+// Retry thanh toán VNPay: đặt TRƯỚC route động /:id
+router.post('/:orderId/retry-payment', protect, retryVnpayPayment);
 
 // ==================== ADMIN ROUTES ====================
 // Đặt route cụ thể (/today) TRƯỚC route động (/:id)

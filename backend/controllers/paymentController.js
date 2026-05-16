@@ -1,7 +1,13 @@
 const Order = require('../models/Order');
 const { io } = require('../socket');
 const { releaseOrderInventory } = require('../services/orderService');
-const { verifyVnpayCallback, buildFrontendReturnUrl } = require('../utils/vnpay');
+const {
+  verifyVnpayCallback,
+  buildFrontendReturnUrl,
+  buildVnpayPaymentUrl,
+  createVnpayTxnRef,
+  normalizeIp
+} = require('../utils/vnpay');
 
 function emitOrderPaymentUpdated(order) {
   const payload = {
@@ -57,9 +63,12 @@ async function finalizeVnpayOrder(order, params) {
     };
   }
 
+  // Khi thanh toán thất bại: chỉ đánh dấu paymentStatus='failed'
+  // KHÔNG hủy đơn hàng và KHÔNG release inventory ngay
+  // → Cho phép user retry thanh toán từ trang VnpayReturn
+  // Inventory chỉ được release khi user thực sự hủy (PUT /orders/:id/status cancelled)
   order.paymentStatus = 'failed';
-  order.orderStatus = 'cancelled';
-  await releaseOrderInventory(order);
+  // Giữ orderStatus = 'pending' để user có thể retry
   await order.save();
 
   emitOrderPaymentUpdated(order);
@@ -144,5 +153,98 @@ exports.handleVnpayIpn = async (req, res) => {
   } catch (error) {
     console.error('handleVnpayIpn failed:', error);
     return res.status(200).json({ RspCode: '99', Message: error.message || 'Unknown error' });
+  }
+};
+
+/**
+ * POST /orders/:orderId/retry-payment
+ * Tạo lại VNPay payment URL mới cho đơn hàng đã thất bại.
+ * - KHÔNG tạo đơn hàng mới
+ * - KHÔNG thay đổi inventory (đã reserved từ trước)
+ * - Chỉ cập nhật paymentRef mới và trả về paymentUrl mới
+ */
+exports.retryVnpayPayment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    // Chỉ cho phép chủ đơn hàng retry
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền thực hiện thao tác này'
+      });
+    }
+
+    // Chỉ cho phép retry khi phương thức là VNPAY và thanh toán chưa thành công
+    if (order.paymentMethod !== 'VNPAY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng này không sử dụng VNPAY'
+      });
+    }
+
+    if (order.paymentStatus === 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng này đã được thanh toán thành công'
+      });
+    }
+
+    if (order.orderStatus === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng đã bị hủy, không thể thanh toán lại'
+      });
+    }
+
+    // Tạo paymentRef mới và URL mới, giữ nguyên đơn hàng và inventory
+    const newPaymentRef = createVnpayTxnRef();
+    const clientIp = req.headers['x-forwarded-for']
+      || req.connection?.remoteAddress
+      || req.socket?.remoteAddress
+      || '127.0.0.1';
+
+    const { paymentUrl, expireDate } = buildVnpayPaymentUrl({
+      amount: order.totalAmount,
+      ipAddr: normalizeIp(clientIp),
+      txnRef: newPaymentRef,
+      orderInfo: `Thanh toan lai don hang ${order._id}`
+    });
+
+    // Cập nhật paymentRef mới và reset trạng thái về pending
+    order.paymentRef = newPaymentRef;
+    order.paymentStatus = 'pending';
+    order.paymentUrlExpiresAt = new Date(
+      `${expireDate.slice(0, 4)}-${expireDate.slice(4, 6)}-${expireDate.slice(6, 8)}T${expireDate.slice(8, 10)}:${expireDate.slice(10, 12)}:${expireDate.slice(12, 14)}+07:00`
+    );
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Tạo lại link thanh toán thành công',
+      paymentUrl
+    });
+  } catch (error) {
+    console.error('retryVnpayPayment failed:', error);
+
+    if (error.message === 'VNPAY config is missing') {
+      return res.status(400).json({
+        success: false,
+        message: 'VNPay chưa được cấu hình trên backend'
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Có lỗi khi tạo lại link thanh toán'
+    });
   }
 };
