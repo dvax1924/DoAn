@@ -55,7 +55,6 @@ export function Input({
 }) {
   const autoId = React.useId()
   const inputId = id ?? autoId
-  const [isFocused, setIsFocused] = React.useState(false);
 
   return (
     <div className="w-full">
@@ -73,32 +72,17 @@ export function Input({
             "border border-border rounded-lg",
             "placeholder:text-muted-foreground placeholder:text-sm",
             "transition-all duration-200",
-            "focus:outline-none focus:border-foreground focus:ring-1 focus:ring-foreground",
+            "focus:outline-none focus:border-foreground",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted",
-            error && "border-destructive focus:border-destructive focus:ring-destructive",
+            error && "border-destructive focus:border-destructive",
             sizes[size],
             className
           )}
           required={required}
-          onFocus={(e) => {
-            setIsFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            onBlur?.(e);
-          }}
+          onFocus={(e) => onFocus?.(e)}
+          onBlur={(e) => onBlur?.(e)}
           transition={{ duration: 0.15 }}
           {...props}
-        />
-        <motion.div
-          className="absolute bottom-0 left-1/2 h-[2px] bg-foreground rounded-full"
-          initial={{ width: 0, x: "-50%" }}
-          animate={{
-            width: isFocused ? "calc(100% - 2px)" : 0,
-            x: "-50%",
-          }}
-          transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
         />
       </div>
       {(error || hint) && (
@@ -131,7 +115,6 @@ export function Textarea({
 }) {
   const autoId = React.useId()
   const inputId = id ?? autoId
-  const [isFocused, setIsFocused] = React.useState(false)
 
   return (
     <div className="w-full">
@@ -149,21 +132,15 @@ export function Textarea({
             "border border-border rounded-lg",
             "placeholder:text-muted-foreground placeholder:text-sm",
             "transition-all duration-200",
-            "focus:outline-none focus:border-foreground focus:ring-1 focus:ring-foreground",
+            "focus:outline-none focus:border-foreground",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted",
             "resize-y",
-            error && "border-destructive focus:border-destructive focus:ring-destructive",
+            error && "border-destructive focus:border-destructive",
             className
           )}
           required={required}
-          onFocus={(e) => {
-            setIsFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setIsFocused(false);
-            onBlur?.(e);
-          }}
+          onFocus={(e) => onFocus?.(e)}
+          onBlur={(e) => onBlur?.(e)}
           transition={{ duration: 0.15 }}
           {...props}
         />

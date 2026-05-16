@@ -43,6 +43,45 @@
   .recharts-surface:focus {
     outline: none !important;
   }
+
+  input,
+  textarea,
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    outline: none !important;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    box-shadow: none !important;
+    background-clip: padding-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #1A1A1B !important;
+  }
+
+  input::-moz-focus-inner,
+  textarea::-moz-focus-inner,
+  select::-moz-focus-inner {
+    border: 0;
+  }
+
+  input::-webkit-textfield-decoration-container,
+  input::-webkit-search-decoration,
+  input::-webkit-search-cancel-button,
+  input::-webkit-search-results-button,
+  input::-webkit-search-results-decoration {
+    display: none;
+  }
 }
 
 @layer components {
