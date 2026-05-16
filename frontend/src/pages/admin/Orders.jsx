@@ -285,12 +285,32 @@ export default function AdminOrders() {
       }
     };
 
+    const handleStatusUpdate = (data) => {
+      const { orderId, newStatus, confirmedAt } = data;
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === orderId
+            ? { ...order, orderStatus: newStatus, confirmedAt: confirmedAt || order.confirmedAt }
+            : order
+        )
+      );
+      
+      // Update selectedOrder if it's currently open in modal
+      setSelectedOrder((prev) => 
+        prev && prev._id === orderId 
+          ? { ...prev, orderStatus: newStatus, confirmedAt: confirmedAt || prev.confirmedAt }
+          : prev
+      );
+    };
+
     socket.on('newOrderCreated', handleNewOrder);
     socket.on('orderPaymentUpdated', handlePaymentUpdate);
+    socket.on('orderStatusUpdated', handleStatusUpdate);
 
     return () => {
       socket.off('newOrderCreated', handleNewOrder);
       socket.off('orderPaymentUpdated', handlePaymentUpdate);
+      socket.off('orderStatusUpdated', handleStatusUpdate);
     };
   }, [fetchOrders]);
 
