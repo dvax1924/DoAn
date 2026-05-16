@@ -88,9 +88,6 @@ export function Input({
             setIsFocused(false);
             onBlur?.(e);
           }}
-          animate={{
-            scale: isFocused ? 1.005 : 1,
-          }}
           transition={{ duration: 0.15 }}
           {...props}
         />
@@ -166,9 +163,6 @@ export function Textarea({
           onBlur={(e) => {
             setIsFocused(false);
             onBlur?.(e);
-          }}
-          animate={{
-            scale: isFocused ? 1.002 : 1,
           }}
           transition={{ duration: 0.15 }}
           {...props}
