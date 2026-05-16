@@ -4,7 +4,7 @@ import Footer from './Footer';
 const Layout = ({ children }) => {
   return (
     <div style={{ 
-      minHeight: '100vh', 
+      minHeight: '100dvh', 
       display: 'flex', 
       flexDirection: 'column',
       backgroundColor: '#F5F5F3'
