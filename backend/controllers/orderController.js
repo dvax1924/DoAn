@@ -220,6 +220,17 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    // ─── Guard: VNPAY order chưa thanh toán thì không được confirm ───────────────
+    // Admin chỉ được xác nhận đơn VNPAY khi paymentStatus === 'paid'
+    // Áp dụng cho cả admin và customer (dù customer không thể confirm theo guard trên)
+    if (orderStatus === 'confirmed' && order.paymentMethod === 'VNPAY' && order.paymentStatus !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Không thể xác nhận đơn hàng vì thanh toán VNPay chưa thành công'
+      });
+    }
+
+    // ─── Guard: không hủy đơn VNPAY đang chờ thanh toán (paymentStatus=pending) ─
     if (orderStatus === 'cancelled' && order.paymentMethod === 'VNPAY' && order.paymentStatus === 'pending') {
       return res.status(400).json({
         success: false,
