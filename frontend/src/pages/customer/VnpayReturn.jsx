@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   ArrowRight,
   Receipt,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "../../api/axiosInstance";
@@ -203,6 +204,11 @@ export default function VnpayReturn() {
   const [totalAmount, setTotalAmount] = useState(0);
   const handledCartStateRef = useRef(false);
 
+  // Trạng thái retry
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState(null);
+  const retryHandledRef = useRef(false);
+
   const status = searchParams.get('status') || 'error';
   const orderId = searchParams.get('orderId') || '';
 
@@ -256,6 +262,61 @@ export default function VnpayReturn() {
 
     fetchOrderAmount();
   }, [orderId]);
+
+  /**
+   * Xử lý khi người dùng nhấn "Thử lại thanh toán" cho đơn hàng VNPAY thất bại
+   * - Gọi backend API để lấy paymentUrl mới cho đơn hàng hiện tại (không tạo đơn hàng mới)
+   * - Redirect đến trang thanh toán VNPay mới
+   */
+  const handleRetryPayment = async () => {
+    if (isRetrying || !orderId) return;
+
+    setIsRetrying(true);
+    setRetryError(null);
+
+    try {
+      // Gọi API endpoint mới: POST /orders/:orderId/retry-payment
+      // Endpoint này sẽ trả về paymentUrl mới cho đơn hàng tương tự
+      const res = await api.post(`/orders/${orderId}/retry-payment`);
+
+      if (res.data.success && res.data.paymentUrl) {
+        // Redirect đến trang thanh toán VNPay mới
+        window.location.href = res.data.paymentUrl;
+      } else {
+        setRetryError(res.data.message || 'Không thể lấy URL thanh toán mới');
+        setIsRetrying(false);
+      }
+    } catch (error) {
+      console.error('Lỗi khi thử lại thanh toán:', error);
+      setRetryError(
+        error.response?.data?.message || 'Có lỗi khi xử lý yêu cầu thử lại'
+      );
+      setIsRetrying(false);
+    }
+  };
+
+  /**
+   * Hủy đơn hàng khi người dùng rời khỏi trang (chỉ khi status === 'failed')
+   * Được gọi khi user click "Xem lịch sử đơn hàng" hoặc "Tiếp tục mua sắm"
+   * Update: orderStatus -> 'cancelled', paymentStatus -> 'cancelled', release inventory
+   */
+  const handleCancelOrder = async () => {
+    // Chỉ hủy khi status là 'failed' và đơn hàng vẫn ở trạng thái 'pending'
+    if (status !== 'failed' || !orderId || retryHandledRef.current) return;
+
+    retryHandledRef.current = true;
+
+    try {
+      // Gọi API để hủy đơn hàng: PUT /orders/:orderId/status
+      // Truyền orderStatus: 'cancelled'
+      await api.put(`/orders/${orderId}/status`, {
+        orderStatus: 'cancelled'
+      });
+    } catch (error) {
+      console.error('Không thể hủy đơn hàng:', error);
+      // Không hiển thị lỗi cho user, vì đây là xử lý ngầm
+    }
+  };
 
   // Format currency
   const formatCurrency = (value) => {
@@ -362,7 +423,10 @@ export default function VnpayReturn() {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => navigate('/orders')}
+                onClick={() => {
+                  handleCancelOrder();
+                  navigate('/orders');
+                }}
                 className="w-full flex items-center justify-center gap-2"
               >
                 Xem lịch sử đơn hàng <ArrowRight size={16} />
@@ -371,12 +435,54 @@ export default function VnpayReturn() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => navigate('/products')}
+                onClick={() => {
+                  handleCancelOrder();
+                  navigate('/products');
+                }}
                 className="w-full flex items-center justify-center gap-2"
               >
                 <ShoppingBag size={16} /> Tiếp tục mua sắm
               </Button>
 
+              {/* Retry button for failed status */}
+              {status === "failed" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="mt-1"
+                >
+                  {/* Error message khi retry thất bại */}
+                  {retryError && (
+                    <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-600 text-center">
+                      {retryError}
+                    </div>
+                  )}
+
+                  {/* Nút retry payment */}
+                  <button
+                    type="button"
+                    disabled={isRetrying}
+                    onClick={handleRetryPayment}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 text-sm tracking-wide underline underline-offset-4",
+                      "transition-colors py-2 rounded",
+                      isRetrying
+                        ? "text-muted-foreground cursor-wait opacity-60"
+                        : "text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/50"
+                    )}
+                  >
+                    {isRetrying ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      "Thử lại thanh toán"
+                    )}
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
         </motion.div>
