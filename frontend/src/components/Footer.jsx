@@ -96,12 +96,12 @@ const Footer = () => {
           >
             <motion.div
               variants={itemVariants}
-              className="flex flex-col gap-4 text-center md:text-left"
+              className="flex flex-col items-center gap-4 text-center md:items-start md:text-left"
             >
               <p className="text-3xl font-bold tracking-[0.3em] text-white md:text-4xl">
                 GOLDIE
               </p>
-              <p className="max-w-xs text-sm leading-relaxed text-white/45 md:max-w-sm">
+              <p className="max-w-xs text-[15px] font-light leading-relaxed text-white/45 md:max-w-sm md:text-sm">
                 Discover timeless elegance and luxury craftsmanship. Each
                 collection reflects a refined, modern point of view.
               </p>
