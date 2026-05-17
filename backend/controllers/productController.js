@@ -5,6 +5,7 @@ const {
   deleteCloudinaryImage,
   isCloudinaryUrl
 } = require('../utils/cloudinary');
+const { slugify } = require('../utils/slugify');
 
 function parseJsonArray(value, fallback = []) {
   if (!value) return fallback;
@@ -51,7 +52,7 @@ exports.createProduct = async (req, res) => {
     const images = req.files?.length ? await uploadProductImages(req.files) : [];
     uploadedImages.push(...images);
 
-    const slug = name.toLowerCase().trim().replace(/ /g, '-');
+    const slug = slugify(name);
 
     const product = await Product.create({
       name,
@@ -128,9 +129,15 @@ exports.getProductById = async (req, res) => {
 
 exports.getProductBySlug = async (req, res) => {
   try {
+    const requestedSlug = String(req.params.slug || '').trim();
+    const normalizedSlug = slugify(requestedSlug);
+
     const product = await Product.findOne({
-      slug: req.params.slug,
-      isActive: true
+      isActive: true,
+      $or: [
+        { slug: requestedSlug },
+        { slug: normalizedSlug }
+      ]
     }).populate('category', 'name');
 
     if (!product) {
@@ -156,7 +163,7 @@ exports.updateProduct = async (req, res) => {
 
     if (name) {
       product.name = name;
-      product.slug = name.toLowerCase().trim().replace(/ /g, '-');
+      product.slug = slugify(name);
     }
     if (description !== undefined) product.description = description;
     if (category) product.category = category;

@@ -93,8 +93,9 @@ const ProductCard = memo(({
   const images = getProductImages(product)
   const primaryImage = images[0] || FALLBACK_IMAGE
   const hoverImage = images[1] || primaryImage
+  const encodedSlug = slug ? encodeURIComponent(slug) : ''
   const productHref =
-    href || (slug ? `/products/${slug}` : _id ? `/products/${_id}` : id ? `/products/${id}` : '/products')
+    href || (encodedSlug ? `/products/${encodedSlug}` : _id ? `/products/${_id}` : id ? `/products/${id}` : '/products')
   const sizes = [...new Set(variants.map(getVariantSize).filter(Boolean))]
 
   return (

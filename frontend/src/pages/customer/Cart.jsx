@@ -45,7 +45,9 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
   const imageUrl =
     getImageUrl(item.image) ||
     'https://via.placeholder.com/200x280/eeeeee/666666?text=No+Image'
-  const productLink = item.slug ? `/products/${item.slug}` : '/products'
+  const productLink = item.slug
+    ? `/products/${encodeURIComponent(item.slug)}`
+    : '/products'
 
   return (
     <motion.div

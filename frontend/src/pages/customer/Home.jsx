@@ -55,7 +55,7 @@ const featuredItemVariants = {
 const normalizeFeaturedProduct = (product) => ({
   id: product._id || product.id,
   slug: product.slug || '',
-  href: product.slug ? `/products/${product.slug}` : '/products',
+  href: product.slug ? `/products/${encodeURIComponent(product.slug)}` : '/products',
   name: product.name || 'Untitled product',
   price: product.price,
   images:

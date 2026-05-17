@@ -28,6 +28,18 @@ function formatPrice(price) {
   }).format(price)
 }
 
+function normalizeSlug(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+}
+
 const ProductDetail = () => {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -65,8 +77,37 @@ const ProductDetail = () => {
       setLoading(true)
 
       try {
-        const res = await api.get(`/products/slug/${slug}`)
-        const data = res.data.product || res.data
+        const safeSlug = encodeURIComponent(slug || '')
+        let data
+
+        try {
+          const res = await api.get(`/products/slug/${safeSlug}`)
+          data = res.data.product || res.data
+        } catch (error) {
+          const isSlugEndpointMissing = error.response?.status === 404
+
+          if (!isSlugEndpointMissing) {
+            throw error
+          }
+
+          const fallbackRes = await api.get('/products?limit=500')
+          const fallbackProducts = fallbackRes.data.products || fallbackRes.data || []
+          const targetSlug = String(slug || '')
+          const normalizedTargetSlug = normalizeSlug(targetSlug)
+
+          data = fallbackProducts.find((item) => {
+            const itemSlug = String(item?.slug || '')
+            return (
+              itemSlug === targetSlug ||
+              normalizeSlug(itemSlug) === normalizedTargetSlug
+            )
+          })
+
+          if (!data) {
+            throw error
+          }
+        }
+
         const sorted = sortVariantsBySize(data.variants || [])
 
         setProduct(data)
