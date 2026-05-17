@@ -24,6 +24,7 @@ import AdminCustomers from '../pages/admin/Customers';
 import AdminAccounts from '../pages/admin/Accounts';
 import AddProduct from '../pages/admin/AddProduct';
 import EditProduct from '../pages/admin/EditProduct';
+import NotFound from '../pages/NotFound';
 
 // Chỉ cho Admin — customer bị redirect về /
 function AdminRoute({ children }) {
@@ -69,6 +70,7 @@ const AppRouter = () => {
         <Route path="/admin/accounts" element={<AdminRoute><AdminLayout><AdminAccounts /></AdminLayout></AdminRoute>} />
         <Route path="/admin/products/add" element={<AdminRoute><AdminLayout><AddProduct /></AdminLayout></AdminRoute>} />
         <Route path="/admin/products/edit/:id" element={<AdminRoute><AdminLayout><EditProduct /></AdminLayout></AdminRoute>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </PageTransition>
   );

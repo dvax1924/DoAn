@@ -11,7 +11,7 @@ import { Modal, ModalContent } from '@/components/ui/Modal';
 
 const EASE = [0.23, 1, 0.32, 1];
 const DEFAULT_LOCKED_MESSAGE =
-  'Tài khoản của bạn đã bị vô hiệu hóa hoặc không tồn tại. Vui lòng liên hệ quản trị viên 0975959982';
+  'Tài khoản của bạn đã bị vô hiệu hóa hoặc không tồn tại. Vui lòng liên hệ quản trị viên để biết thêm chi tiết 0975959982';
 
 const containerVariants = {
   hidden: {},
@@ -342,7 +342,7 @@ export default function Login() {
               Quên mật khẩu?
             </h3>
             <p className="mb-6 max-w-xs text-sm text-muted-foreground leading-relaxed">
-              Vui lòng liên hệ với quản trị viên nếu bạn quên mật khẩu.
+              Vui lòng liên hệ với quản trị viên để khôi phục mật khẩu.
             </p>
 
             <a

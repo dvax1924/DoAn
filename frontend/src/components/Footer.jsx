@@ -102,7 +102,7 @@ const Footer = () => {
                 GOLDIE
               </p>
               <p className="mx-auto max-w-md text-base leading-relaxed text-white/45 text-center md:mx-0 md:max-w-sm md:text-sm md:text-left">
-                  GOLDIE forges a raw new aesthetic with technical fabrics, experimental knitting, and chemical dyes. Urban streetwear is reborn through deconstructed cuts, hand distressing, and bold asymmetrical details.
+                  GOLDIE crafts a raw aesthetic with technical fabrics, experimental knitting, and chemical dyes — redefining urban streetwear through deconstructed cuts, hand distressing, and bold asymmetry.
               </p>
             </motion.div>
 
