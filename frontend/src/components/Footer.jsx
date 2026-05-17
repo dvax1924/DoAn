@@ -108,12 +108,12 @@ const Footer = () => {
 
             <motion.div
               variants={itemVariants}
-              className="flex flex-col gap-4 text-left md:items-start"
+              className="flex flex-col gap-4 text-center items-center md:text-left md:items-start"
             >
               <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-white/90">
                 Quick Links
               </h3>
-              <nav className="flex flex-col gap-3">
+              <nav className="flex flex-col gap-3 items-center md:items-start">
                 {quickLinks.map((link) => (
                   <motion.div
                     key={link.name}
@@ -137,51 +137,53 @@ const Footer = () => {
 
             <motion.div
               variants={itemVariants}
-              className="flex flex-col gap-4 text-center md:items-end"
+              className="flex flex-col items-center md:items-end"
             >
-              <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-white/90">
-                Follow Us
-              </h3>
-              <div className="flex justify-center gap-4 md:justify-end">
-                {socialLinks.map((social, index) => {
-                  const Icon = social.icon
-                  const isActive = hoveredIcon === index
+              <div className="flex flex-col gap-4 items-center md:items-start text-center md:text-left">
+                <h3 className="text-xs font-semibold uppercase tracking-[0.24em] text-white/90">
+                  Follow Us
+                </h3>
+                <div className="flex justify-center gap-4 md:justify-start">
+                  {socialLinks.map((social, index) => {
+                    const Icon = social.icon
+                    const isActive = hoveredIcon === index
 
-                  return (
-                    <motion.a
-                      key={social.name}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.name}
-                      className={cn(
-                        'flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300',
-                        isActive
-                          ? 'text-white'
-                          : 'text-white/45 hover:text-white'
-                      )}
-                      whileHover="hover"
-                      variants={socialHoverVariants}
-                      onHoverStart={() => setHoveredIcon(index)}
-                      onHoverEnd={() => setHoveredIcon(null)}
-                    >
-                      <Icon size={30} strokeWidth={1.5} />
-                    </motion.a>
-                  )
-                })}
-              </div>
-              <div className="mx-auto flex w-full max-w-[260px] flex-col gap-3 text-left md:mx-0 md:items-end md:text-right">
-                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
-                  <MapPin size={16} strokeWidth={1.5} className="text-white/60" />
-                  <span>360 Phố Huế, Hà Nội</span>
+                    return (
+                      <motion.a
+                        key={social.name}
+                        href={social.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={social.name}
+                        className={cn(
+                          'flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300',
+                          isActive
+                            ? 'text-white'
+                            : 'text-white/45 hover:text-white'
+                        )}
+                        whileHover="hover"
+                        variants={socialHoverVariants}
+                        onHoverStart={() => setHoveredIcon(index)}
+                        onHoverEnd={() => setHoveredIcon(null)}
+                      >
+                        <Icon size={30} strokeWidth={1.5} />
+                      </motion.a>
+                    )
+                  })}
                 </div>
-                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
-                  <Phone size={16} strokeWidth={1.5} className="text-white/60" />
-                  <span>0985 032 589</span>
-                </div>
-                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
-                  <Mail size={16} strokeWidth={1.5} className="text-white/60" />
-                  <span>info@goldievietnam.com</span>
+                <div className="flex flex-col gap-3 mt-2">
+                  <div className="flex items-center justify-center md:justify-start gap-3 text-sm text-white/60">
+                    <MapPin size={16} strokeWidth={1.5} className="shrink-0 text-white/60" />
+                    <span>360 Phố Huế, Hà Nội</span>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-3 text-sm text-white/60">
+                    <Phone size={16} strokeWidth={1.5} className="shrink-0 text-white/60" />
+                    <span>0985 032 589</span>
+                  </div>
+                  <div className="flex items-center justify-center md:justify-start gap-3 text-sm text-white/60">
+                    <Mail size={16} strokeWidth={1.5} className="shrink-0 text-white/60" />
+                    <span>info@goldievietnam.com</span>
+                  </div>
                 </div>
               </div>
             </motion.div>
