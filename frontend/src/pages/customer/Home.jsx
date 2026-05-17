@@ -54,7 +54,8 @@ const featuredItemVariants = {
 
 const normalizeFeaturedProduct = (product) => ({
   id: product._id || product.id,
-  href: product._id ? `/products/${product._id}` : '/products',
+  slug: product.slug || '',
+  href: product.slug ? `/products/${product.slug}` : '/products',
   name: product.name || 'Untitled product',
   price: product.price,
   images:
@@ -86,7 +87,6 @@ const Home = () => {
       const products = Array.isArray(data) ? data : []
       setFeaturedProducts(products.slice(0, 4).map(normalizeFeaturedProduct))
     } catch (error) {
-      console.error('Loi tai san pham noi bat:', error)
       setFeaturedProducts([])
     } finally {
       setLoadingFeatured(false)

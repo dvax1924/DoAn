@@ -23,6 +23,7 @@ import api from '../../api/axiosInstance'
 import { cn } from '@/lib/utils'
 import socket from '../../api/socket'
 import { Button } from '@/components/ui/Button'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatCurrency = (value) => {
@@ -244,7 +245,7 @@ const AdminDashboard = () => {
               exit={{ opacity: 0 }}
               className="flex min-h-[40vh] items-center justify-center"
             >
-              <RefreshCw className="h-8 w-8 animate-spin text-[#1A1A1B]" strokeWidth={2} />
+              <LoadingSpinner size="large" variant="dark" />
             </motion.div>
           ) : (
             <React.Fragment key="content">

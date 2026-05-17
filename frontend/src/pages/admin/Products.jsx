@@ -277,7 +277,7 @@ export default function AdminProducts() {
                           <div className="col-span-1">
                             <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-gray-100">
                               {productImage ? (
-                                <img src={productImage} alt={product.name} className="h-full w-full object-cover" />
+                                <img src={productImage} alt={product.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-gray-200">
                                   <Package className="h-6 w-6 text-gray-400" />

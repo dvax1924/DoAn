@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import LoadingSpinner from './LoadingSpinner'
 
 // ─── Variant styles ───────────────────────────────────────────────────────────
 const variants = {
@@ -97,10 +98,9 @@ export function Button({
       {/* Content */}
       {loading ? (
         <span className="relative flex items-center justify-center gap-2">
-          <motion.span
-            className="h-3.5 w-3.5 rounded-full border-2 border-current/30 border-t-current"
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 0.75, ease: 'linear' }}
+          <LoadingSpinner 
+            size="small" 
+            variant={variant === 'primary' || variant === 'danger' || variant === 'destructive' ? 'light' : 'dark'} 
           />
           {typeof children === 'string' ? 'Đang xử lý...' : children}
         </span>

@@ -1,19 +1,15 @@
-﻿import { Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Search,
-  User,
-  ShoppingBag,
-  X,
-  ChevronDown,
-  Menu,
-} from 'lucide-react'
+import { Search, User, ShoppingBag, X, ChevronDown, Menu } from 'lucide-react'
+
+import { toast } from '@/components/ui/Toast'
+
 import { useAuth } from '../hooks/useAuth'
 import { useCart } from '../hooks/useCart'
+
 import api from '../api/axiosInstance'
 import socket from '../api/socket'
-import { toast } from '@/components/ui/Toast'
 import { cn } from '@/lib/utils'
 
 /**
@@ -29,7 +25,7 @@ const POPULAR_SEARCH_TERMS = [
   'Knit',
 ]
 
-const Navbar = () => {
+const Navbar = memo(() => {
   const { user, logout } = useAuth()
   const { cartCount } = useCart()
   const navigate = useNavigate()
@@ -54,7 +50,6 @@ const Navbar = () => {
 
       setCategories([{ name: 'All', slug: 'all' }, ...fetched])
     } catch (error) {
-      console.error('Lỗi tải danh mục:', error)
       setCategories([
         { _id: 'all', name: 'All', slug: 'all' },
         { _id: 't-shirt', name: 'T-Shirt', slug: 't-shirt' },
@@ -125,27 +120,27 @@ const Navbar = () => {
     }
   }, [showSearch, mobileMenuOpen])
 
-  const handleSearch = (e) => {
+  const handleSearch = useCallback((e) => {
     e.preventDefault()
     if (searchTerm.trim()) {
       navigate(`/products?search=${searchTerm}`)
       setShowSearch(false)
       setSearchTerm('')
     }
-  }
+  }, [searchTerm, navigate])
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     setShowAccountMenu(false)
     setMobileMenuOpen(false)
     toast.success('Đã đăng xuất')
     navigate('/')
-  }
+  }, [logout, navigate])
 
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     setShowSearch(false)
     setSearchTerm('')
-  }
+  }, [])
 
   /** @type {import('framer-motion').Variants} */
   const dropdownVariants = {
@@ -725,6 +720,7 @@ const Navbar = () => {
       </AnimatePresence>
     </>
   )
-}
+})
 
+Navbar.displayName = 'Navbar'
 export default Navbar

@@ -21,6 +21,7 @@ import socket from '../../api/socket'
 import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { PageSpinner, ButtonSpinner } from '@/components/ui/LoadingSpinner'
 import { cn } from '@/lib/utils'
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -137,7 +138,6 @@ const Orders = () => {
         socket.off('orderPaymentUpdated', handleOrderPaymentUpdated)
       }
     } catch (error) {
-      console.error('Socket setup error:', error)
       return undefined
     }
   }, [])
@@ -176,15 +176,7 @@ const Orders = () => {
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5F5F3]">
-        <motion.div
-          className="h-6 w-6 rounded-full border-2 border-[#1A1A1B]/20 border-t-[#1A1A1B]"
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-        />
-      </div>
-    )
+    return <PageSpinner />
   }
 
   // ── Empty state ────────────────────────────────────────────────────────────
@@ -332,11 +324,7 @@ const Orders = () => {
                           whileTap={{ scale: 0.98 }}
                         >
                           {isCancelling ? (
-                            <motion.div
-                              className="h-4 w-4 rounded-full border-2 border-red-300 border-t-red-600"
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            />
+                            <ButtonSpinner />
                           ) : (
                             <X className="h-4 w-4" />
                           )}

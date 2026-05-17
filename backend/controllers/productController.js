@@ -126,6 +126,23 @@ exports.getProductById = async (req, res) => {
   }
 };
 
+exports.getProductBySlug = async (req, res) => {
+  try {
+    const product = await Product.findOne({
+      slug: req.params.slug,
+      isActive: true
+    }).populate('category', 'name');
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Khong tim thay san pham' });
+    }
+
+    res.json({ success: true, product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.updateProduct = async (req, res) => {
   const newlyUploadedImages = [];
 

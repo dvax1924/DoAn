@@ -8,6 +8,7 @@ import { sortVariantsBySize } from "../../utils/sortVariantsBySize";
 import { getImageUrl } from "../../utils/getImageUrl";
 import { cn } from "@/lib/utils";
 import Button from "../../components/ui/Button";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
 
 const availableSizes = ["M", "L", "XL"];
 
@@ -248,7 +249,7 @@ export default function EditProduct() {
           animate={{ opacity: 1 }}
           className="text-center"
         >
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[#1A1A1B]" />
+          <LoadingSpinner size="large" variant="dark" className="mx-auto" />
           <p className="mt-4 text-sm text-gray-500">Đang tải dữ liệu...</p>
         </motion.div>
       </div>

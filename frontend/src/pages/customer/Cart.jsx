@@ -45,6 +45,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
   const imageUrl =
     getImageUrl(item.image) ||
     'https://via.placeholder.com/200x280/eeeeee/666666?text=No+Image'
+  const productLink = item.slug ? `/products/${item.slug}` : '/products'
 
   return (
     <motion.div
@@ -71,7 +72,7 @@ function CartItem({ item, onUpdateQuantity, onRemove }) {
 
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div>
-          <Link to={`/products/${item.product}`}>
+          <Link to={productLink}>
             <h3 className="line-clamp-2 text-sm sm:text-base font-medium text-accent transition-all hover:underline md:text-lg underline-offset-4">
               {item.name}
             </h3>

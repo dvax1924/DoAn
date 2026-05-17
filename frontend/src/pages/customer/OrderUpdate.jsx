@@ -6,6 +6,7 @@ import api from '../../api/axiosInstance'
 import socket from '../../api/socket'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { PageSpinner } from '@/components/ui/LoadingSpinner'
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 /** @type {import('framer-motion').Variants} */
@@ -137,15 +138,7 @@ const OrderUpdate = () => {
 
   // ── Guards ─────────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <motion.div
-          className="h-6 w-6 rounded-full border-2 border-foreground/20 border-t-foreground"
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-        />
-      </div>
-    )
+    return <PageSpinner />
   }
 
   if (!order) {

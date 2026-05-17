@@ -106,7 +106,6 @@ const Products = () => {
           }
         }
       } catch (err) {
-        console.error('Lỗi tải sản phẩm:', err)
         if (!isLoadMore) {
           setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.')
         }

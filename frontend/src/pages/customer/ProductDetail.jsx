@@ -29,7 +29,7 @@ function formatPrice(price) {
 }
 
 const ProductDetail = () => {
-  const { id } = useParams()
+  const { slug } = useParams()
   const navigate = useNavigate()
   const { addToCart, cart } = useCart()
 
@@ -62,8 +62,10 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
+      setLoading(true)
+
       try {
-        const res = await api.get(`/products/${id}`)
+        const res = await api.get(`/products/slug/${slug}`)
         const data = res.data.product || res.data
         const sorted = sortVariantsBySize(data.variants || [])
 
@@ -77,7 +79,6 @@ const ProductDetail = () => {
           setSelectedStock(initial.stock || 0)
         }
       } catch (error) {
-        console.error('Lỗi tải chi tiết sản phẩm', error)
         toast.error('Không tìm thấy sẩn phẩm')
       } finally {
         setLoading(false)
@@ -85,11 +86,15 @@ const ProductDetail = () => {
     }
 
     fetchProduct()
-  }, [id])
+  }, [slug])
 
   const onProductUpdated = useCallback(
     (data) => {
-      if (data.product && data.product._id === id) {
+      const matchesCurrentProduct =
+        data.product &&
+        (data.product.slug === slug || data.product._id === product?._id)
+
+      if (matchesCurrentProduct) {
         const updated = data.product
         const sorted = sortVariantsBySize(updated.variants || [])
 
@@ -120,17 +125,17 @@ const ProductDetail = () => {
         toast.info('Sản phẩm vừa được cập nhật')
       }
     },
-    [id]
+    [slug, product?._id]
   )
 
   const onProductDeleted = useCallback(
     (data) => {
-      if (data.productId === id) {
+      if (data.productId === product?._id) {
         toast.warning('Sản phẩm này đã bị xóa')
         navigate('/products')
       }
     },
-    [id, navigate]
+    [product?._id, navigate]
   )
 
   useEffect(() => {

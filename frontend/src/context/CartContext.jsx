@@ -10,6 +10,7 @@ const clampQuantityToStock = (nextQty, stock) => {
 const normalizeCartItem = (item) => ({
   ...item,
   product: item?.product?._id || item?.product || '',
+  slug: item?.slug || item?.productData?.slug || item?.product?.slug || '',
   variant: item?.variant
     ? {
         size: item.variant.size || '',
@@ -30,7 +31,6 @@ export const CartProvider = ({ children }) => {
 
       return parsed.map(normalizeCartItem);
     } catch (error) {
-      console.error('Loi load cart:', error);
       return [];
     }
   });
@@ -70,6 +70,7 @@ export const CartProvider = ({ children }) => {
         ...prev,
         {
           product: product._id,
+          slug: product.slug || '',
           name: product.name,
           image: product.images?.[0] || '',
           variant: {

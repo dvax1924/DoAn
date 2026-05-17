@@ -1,7 +1,8 @@
+import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { createLucideIcon, MapPin, Phone, Mail } from 'lucide-react'
-import { useState } from 'react'
+
 import { cn } from '@/lib/utils'
 
 const Instagram = createLucideIcon('Instagram', [
@@ -80,7 +81,7 @@ const socialHoverVariants = {
   },
 }
 
-const Footer = () => {
+const Footer = memo(() => {
   const [hoveredIcon, setHoveredIcon] = useState(null)
 
   return (
@@ -216,6 +217,7 @@ const Footer = () => {
       </div>
     </footer>
   )
-}
+})
 
+Footer.displayName = 'Footer'
 export default Footer

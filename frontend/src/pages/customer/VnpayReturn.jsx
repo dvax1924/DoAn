@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import api from "../../api/axiosInstance";
 import { useCart } from "../../hooks/useCart";
 import { Button } from "@/components/ui/Button";
+import { ButtonSpinner } from "@/components/ui/LoadingSpinner";
 
 const VNPAY_CART_STORAGE_KEY = 'pendingVnpayCart';
 
@@ -256,7 +257,6 @@ export default function VnpayReturn() {
         const order = res.data.order || null;
         setTotalAmount(Number(order?.totalAmount) || 0);
       } catch (error) {
-        console.error('Không thể tải số tiền đơn hàng sau thanh toán:', error);
       }
     };
 
@@ -473,7 +473,7 @@ export default function VnpayReturn() {
                   >
                     {isRetrying ? (
                       <>
-                        <Loader2 size={14} className="animate-spin" />
+                        <ButtonSpinner />
                         Đang xử lý...
                       </>
                     ) : (

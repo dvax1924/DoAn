@@ -23,6 +23,7 @@ import { useCart } from '../../hooks/useCart'
 import { getImageUrl } from '../../utils/getImageUrl'
 import { Input } from '../../components/ui/Input'
 import { cn } from '@/lib/utils'
+import { ButtonSpinner, PageSpinner } from '@/components/ui/LoadingSpinner'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VNPAY_CART_STORAGE_KEY = 'pendingVnpayCart'
@@ -219,11 +220,7 @@ const Checkout = () => {
 
   // ── Guard renders ──────────────────────────────────────────────────────────
   if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F3] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1B]/40" />
-      </div>
-    )
+    return <PageSpinner text="Đang tải thông tin..." />
   }
   if (checkoutItems.length === 0) return <EmptyCartView />
 
@@ -479,7 +476,7 @@ const Checkout = () => {
                       exit={{ opacity: 0 }}
                       className="flex items-center justify-center gap-2"
                     >
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <ButtonSpinner />
                       Đang xử lý...
                     </motion.span>
                   ) : (
@@ -618,7 +615,7 @@ const Checkout = () => {
                       exit={{ opacity: 0 }}
                       className="flex items-center justify-center gap-2"
                     >
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <ButtonSpinner />
                       Đang xử lý...
                     </motion.span>
                   ) : (

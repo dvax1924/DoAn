@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Eye,
@@ -17,6 +17,8 @@ import { useAuth } from '../../hooks/useAuth'
 import api from '../../api/axiosInstance'
 import socket from '../../api/socket'
 import { Input, PasswordInput } from '../../components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { PageSpinner } from '@/components/ui/LoadingSpinner'
 import { cn } from '@/lib/utils'
 
 
@@ -205,15 +207,7 @@ const Profile = () => {
 
   // ── Guards ─────────────────────────────────────────────────────────────────
   if (loading)
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5F5F3]">
-        <motion.div
-          className="h-6 w-6 rounded-full border-2 border-[#1A1A1B]/20 border-t-[#1A1A1B]"
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-        />
-      </div>
-    )
+    return <PageSpinner />
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -392,28 +386,14 @@ const Profile = () => {
                       </div>
 
                       <div className="pt-2">
-                        <motion.button
+                        <Button
                           type="submit"
-                          disabled={savingProfile}
-                          whileTap={{ scale: 0.98 }}
-                          className="group relative h-12 w-full overflow-hidden bg-[#1A1A1B] text-[11px] uppercase tracking-[0.22em] text-white transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+                          loading={savingProfile}
+                          variant="primary"
+                          className="w-full uppercase text-[11px] tracking-[0.22em] h-12"
                         >
-                          <span className="absolute inset-0 translate-x-[-101%] bg-white/10 transition-transform duration-500 ease-out group-hover:translate-x-0" />
-                          <span className="relative flex items-center justify-center gap-2">
-                            {savingProfile ? (
-                              <>
-                                <motion.span
-                                  className="h-3.5 w-3.5 rounded-full border border-white/40 border-t-white"
-                                  animate={{ rotate: 360 }}
-                                  transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-                                />
-                                Đang lưu...
-                              </>
-                            ) : (
-                              'Lưu thay đổi'
-                            )}
-                          </span>
-                        </motion.button>
+                          Lưu thay đổi
+                        </Button>
                       </div>
                     </div>
                   </form>
@@ -509,28 +489,14 @@ const Profile = () => {
                       />
 
                       <div className="pt-2">
-                        <motion.button
+                        <Button
                           type="submit"
-                          disabled={savingPassword}
-                          whileTap={{ scale: 0.98 }}
-                          className="group relative h-12 w-full overflow-hidden bg-[#1A1A1B] text-[11px] uppercase tracking-[0.22em] text-white transition-opacity duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+                          loading={savingPassword}
+                          variant="primary"
+                          className="w-full uppercase text-[11px] tracking-[0.22em] h-12"
                         >
-                          <span className="absolute inset-0 translate-x-[-101%] bg-white/10 transition-transform duration-500 ease-out group-hover:translate-x-0" />
-                          <span className="relative flex items-center justify-center gap-2">
-                            {savingPassword ? (
-                              <>
-                                <motion.span
-                                  className="h-3.5 w-3.5 rounded-full border border-white/40 border-t-white"
-                                  animate={{ rotate: 360 }}
-                                  transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-                                />
-                                Đang cập nhật...
-                              </>
-                            ) : (
-                              'Đổi mật khẩu'
-                            )}
-                          </span>
-                        </motion.button>
+                          Đổi mật khẩu
+                        </Button>
                       </div>
                     </div>
                   </form>

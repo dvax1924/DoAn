@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -71,7 +71,7 @@ function getVariantSize(variant) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const ProductCard = ({
+const ProductCard = memo(({
   product,
   showSizes = true,
   className = '',
@@ -81,6 +81,7 @@ const ProductCard = ({
   const {
     id,
     _id,
+    slug,
     name,
     price,
     category,
@@ -93,10 +94,8 @@ const ProductCard = ({
   const primaryImage = images[0] || FALLBACK_IMAGE
   const hoverImage = images[1] || primaryImage
   const productHref =
-    href || (_id ? `/products/${_id}` : id ? `/products/${id}` : '/products')
+    href || (slug ? `/products/${slug}` : _id ? `/products/${_id}` : id ? `/products/${id}` : '/products')
   const sizes = [...new Set(variants.map(getVariantSize).filter(Boolean))]
-
-
 
   return (
     <motion.article
@@ -124,6 +123,8 @@ const ProductCard = ({
           <motion.img
             src={primaryImage}
             alt={name || 'Product image'}
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
             animate={{
               scale: isHovered ? 1.08 : 1,
@@ -136,6 +137,8 @@ const ProductCard = ({
           <motion.img
             src={hoverImage}
             alt={`${name || 'Product'} - alternate view`}
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
             animate={{
               scale: isHovered ? 1.08 : 1.15,
@@ -236,6 +239,8 @@ const ProductCard = ({
       </Link>
     </motion.article>
   )
-}
+})
+
+ProductCard.displayName = 'ProductCard'
 
 export default ProductCard

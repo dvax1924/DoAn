@@ -23,6 +23,7 @@ import socket from "../../api/socket";
 import { toast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import { TableSkeleton, ORDERS_COLUMNS } from "@/components/ui/TableSkeleton";
+import { ButtonSpinner } from "@/components/ui/LoadingSpinner";
 
 const statusOptions = [
   { value: "all", label: "Tất cả trạng thái" },
@@ -236,7 +237,6 @@ export default function AdminOrders() {
       const res = await api.get('/orders');
       setOrders(res.data.orders || res.data || []);
     } catch (error) {
-      console.error(error);
       toast.error("Không thể tải danh sách đơn hàng");
       setOrders([]);
     } finally {
@@ -343,7 +343,6 @@ export default function AdminOrders() {
       const res = await api.get(`/orders/${orderId}`);
       setSelectedOrder(res.data.order || res.data);
     } catch (error) {
-      console.error(error);
       toast.error("Không thể tải chi tiết đơn hàng");
       setIsModalOpen(false);
     }
@@ -1113,7 +1112,7 @@ export default function AdminOrders() {
                             )}
                           >
                             {isUpdating ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
+                              <ButtonSpinner />
                             ) : (
                               <CheckCircle className="h-4 w-4" strokeWidth={2} />
                             )}
