@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { createLucideIcon } from 'lucide-react'
+import { createLucideIcon, MapPin, Phone, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -96,12 +96,12 @@ const Footer = () => {
           >
             <motion.div
               variants={itemVariants}
-              className="flex flex-col items-center gap-4 text-center md:items-start md:text-left"
+              className="flex flex-col gap-4 text-center md:text-left"
             >
               <p className="text-3xl font-bold tracking-[0.3em] text-white md:text-4xl">
                 GOLDIE
               </p>
-              <p className="max-w-xs text-[15px] font-light leading-relaxed text-white/45 md:max-w-sm md:text-sm">
+              <p className="max-w-xs text-sm leading-relaxed text-white/45 md:max-w-sm">
                 Discover timeless elegance and luxury craftsmanship. Each
                 collection reflects a refined, modern point of view.
               </p>
@@ -171,11 +171,20 @@ const Footer = () => {
                   )
                 })}
               </div>
-              <p className="text-xs uppercase tracking-[0.18em] text-white/35">
-                {hoveredIcon === null
-                  ? 'Follow us on social media'
-                  : socialLinks[hoveredIcon].name}
-              </p>
+              <div className="mx-auto flex w-full max-w-[260px] flex-col gap-3 text-left md:mx-0 md:items-end md:text-right">
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <MapPin size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>360 Phố Huế, Hà Nội</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <Phone size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>0985 032 589</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-sm text-white/60 md:justify-end">
+                  <Mail size={16} strokeWidth={1.5} className="text-white/60" />
+                  <span>info@goldievietnam.com</span>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         </div>
